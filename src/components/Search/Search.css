@@ -1,0 +1,37 @@
+.search-form {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.search-input-container {
+    position: relative;
+    width: 100%;
+    max-width: calc(100% - 10rem);
+    margin-top: 3rem;
+  }
+
+.search-input {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  border-radius: 7px;
+  border: 1px solid #ccc;
+  outline: none;
+  background-color: #e5e3e3;
+}
+
+.search-input:focus {
+  border-color: #000000;
+}
+
+.search-icon {
+    position: absolute;
+    right: 0.1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    color: #666;
+    pointer-events: none;
+  }

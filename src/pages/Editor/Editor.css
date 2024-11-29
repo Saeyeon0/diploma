@@ -1,0 +1,31 @@
+.editor-container {
+    display: grid;
+    grid-template-areas:
+      "canvas properties"
+      "toolbar toolbar";
+    grid-template-rows: 1fr auto;
+    grid-template-columns: 3fr 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  .canvas {
+    grid-area: canvas;
+    background-color: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .properties-panel {
+    grid-area: properties;
+    background-color: #efefef;
+    padding: 1rem;
+  }
+  
+  @media (max-width: 768px) {
+    .properties-panel {
+      display: none; /* Hide properties panel for smaller screens */
+    }
+  }
+  
