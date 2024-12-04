@@ -4,12 +4,25 @@ import {
   faMousePointer,
   faCropSimple,
   faFont,
+  faRotateLeft,
+  faRotateRight,
 } from "@fortawesome/free-solid-svg-icons";
 import "./Toolbar.css";
 
-const Toolbar: React.FC = () => {
+interface ToolbarProps {
+  onUndo: () => void;
+  onRedo: () => void;
+}
+
+const Toolbar: React.FC<ToolbarProps> = ({ onUndo, onRedo }) => {
   return (
     <div className="toolbar">
+      <button className="toolbar-button" title="Undo" onClick={onUndo}>
+        <FontAwesomeIcon icon={faRotateLeft} />
+      </button>
+      <button className="toolbar-button" title="Redo" onClick={onRedo}>
+        <FontAwesomeIcon icon={faRotateRight} />
+      </button>
       <button className="toolbar-button" title="Cursor">
         <FontAwesomeIcon icon={faMousePointer} />
       </button>
