@@ -5,12 +5,16 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
 import Draggable from "react-draggable";
 import { jsPDF } from "jspdf";
+import ColorsList from "../../components/ColorsList/ColorsList";
 
 const Editor: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState({ width: 500, height: 500 });
-  const [initialMousePosition, setInitialMousePosition] = useState({ x: 0, y: 0 });
+  const [initialMousePosition, setInitialMousePosition] = useState({
+    x: 0,
+    y: 0,
+  });
   const [isResizing, setIsResizing] = useState<{
     active: boolean;
     corner: string | null;
@@ -22,10 +26,26 @@ const Editor: React.FC = () => {
   const [history, setHistory] = useState<any[]>([]); // History stack for undo/redo
   const [historyIndex, setHistoryIndex] = useState<number>(-1); // To track the current position in the history
 
+  const [colors, setColors] = useState<any[]>([]);
+
   const imageRef = useRef<HTMLImageElement | null>(null);
   const imageContainerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const fetchColors = async () => {
+      try {
+        const response = await fetch("http://localhost:5001/colors");
+        const data = await response.json();
+        setColors(data); // Set colors state
+      } catch (error) {
+        console.error("Error fetching colors:", error);
+      }
+    };
+
+    fetchColors();
+  }, []);
 
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
@@ -69,18 +89,17 @@ const Editor: React.FC = () => {
     setIsResizing({ active: true, corner });
     setInitialMousePosition({ x: e.clientX, y: e.clientY });
   };
-  
 
   const handleResizeMove = (e: MouseEvent) => {
     if (isResizing.active && imageContainerRef.current) {
       const rect = imageContainerRef.current.getBoundingClientRect();
-      
+
       const deltaX = e.clientX - initialMousePosition.x;
       const deltaY = e.clientY - initialMousePosition.y;
-  
+
       let newWidth = imageSize.width;
       let newHeight = imageSize.height;
-  
+
       // Adjust dimensions based on the corner being dragged
       if (isResizing.corner === "top-left") {
         newWidth = imageSize.width - deltaX;
@@ -95,16 +114,16 @@ const Editor: React.FC = () => {
         newWidth = imageSize.width + deltaX;
         newHeight = imageSize.height + deltaY;
       }
-  
+
       // Apply minimum size constraints
       if (newWidth > 100 && newHeight > 100) {
         setImageSize({ width: newWidth, height: newHeight });
       }
-  
+
       // Update the initial position for smoother resizing
       setInitialMousePosition({ x: e.clientX, y: e.clientY });
     }
-  };  
+  };
 
   const handleResizeEnd = () => {
     setIsResizing({ active: false, corner: null });
@@ -167,24 +186,25 @@ const Editor: React.FC = () => {
 
   // Export PDF function using jsPDF
   const handleExportPDF = () => {
+    if (!uploadedImage) return; // Exit if there's no image uploaded
+
+    // Create a new jsPDF instance with a page size matching the image dimensions
     const doc = new jsPDF({
-      orientation: "portrait", // or "landscape" based on your image aspect ratio
-      unit: "px", // unit for measurement, use "px" for pixel-based
-      format: [imageSize.width, imageSize.height], // set custom page size to match image size
+      orientation: "portrait", // You can adjust this based on the aspect ratio of the image
+      unit: "px", // Use pixels for easier alignment
+      format: [imageSize.width, imageSize.height], // Match the page size to the image size
     });
 
-    if (uploadedImage) {
-      const imgWidth = imageSize.width;
-      const imgHeight = imageSize.height;
-      doc.addImage(
-        uploadedImage,
-        "JPEG",
-        0,
-        0,
-        imageSize.width,
-        imageSize.height
-      );
-    } // Save the PDF with a name
+    // Add the uploaded image to the PDF, filling the entire page
+    doc.addImage(
+      uploadedImage,
+      "JPEG", // Adjust format if needed (e.g., "PNG")
+      0, // X offset
+      0, // Y offset
+      imageSize.width,
+      imageSize.height
+    );
+
     doc.save("exported-image.pdf");
   };
 
@@ -277,6 +297,10 @@ const Editor: React.FC = () => {
             </div>
           )}
         </div>
+        <div className="colors-panel">
+          <h3>Colors</h3>
+          <ColorsList />
+        </div>{" "}
       </div>
       <Toolbar onUndo={handleUndo} onRedo={handleRedo} />
     </div>
