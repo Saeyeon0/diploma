@@ -91,9 +91,7 @@ const Editor: React.FC = () => {
   };
 
   const handleResizeMove = (e: MouseEvent) => {
-    if (isResizing.active && imageContainerRef.current) {
-      const rect = imageContainerRef.current.getBoundingClientRect();
-
+    if (isResizing.active) {
       const deltaX = e.clientX - initialMousePosition.x;
       const deltaY = e.clientY - initialMousePosition.y;
 
@@ -101,27 +99,35 @@ const Editor: React.FC = () => {
       let newHeight = imageSize.height;
 
       // Adjust dimensions based on the corner being dragged
-      if (isResizing.corner === "top-left") {
+      if (
+        isResizing.corner === "top-left" ||
+        isResizing.corner === "bottom-left"
+      ) {
         newWidth = imageSize.width - deltaX;
-        newHeight = imageSize.height - deltaY;
-      } else if (isResizing.corner === "top-right") {
+      } else if (
+        isResizing.corner === "top-right" ||
+        isResizing.corner === "bottom-right"
+      ) {
         newWidth = imageSize.width + deltaX;
+      }
+
+      if (
+        isResizing.corner === "top-left" ||
+        isResizing.corner === "top-right"
+      ) {
         newHeight = imageSize.height - deltaY;
-      } else if (isResizing.corner === "bottom-left") {
-        newWidth = imageSize.width - deltaX;
-        newHeight = imageSize.height + deltaY;
-      } else if (isResizing.corner === "bottom-right") {
-        newWidth = imageSize.width + deltaX;
+      } else if (
+        isResizing.corner === "bottom-left" ||
+        isResizing.corner === "bottom-right"
+      ) {
         newHeight = imageSize.height + deltaY;
       }
 
       // Apply minimum size constraints
       if (newWidth > 100 && newHeight > 100) {
         setImageSize({ width: newWidth, height: newHeight });
+        setInitialMousePosition({ x: e.clientX, y: e.clientY });
       }
-
-      // Update the initial position for smoother resizing
-      setInitialMousePosition({ x: e.clientX, y: e.clientY });
     }
   };
 
@@ -184,25 +190,26 @@ const Editor: React.FC = () => {
     }
   };
 
-  // Export PDF function using jsPDF
   const handleExportPDF = () => {
-    if (!uploadedImage) return; // Exit if there's no image uploaded
+    if (!uploadedImage || !imageRef.current) return;
 
-    // Create a new jsPDF instance with a page size matching the image dimensions
+    // Use the natural dimensions of the image
+    const naturalWidth = imageRef.current.naturalWidth;
+    const naturalHeight = imageRef.current.naturalHeight;
+
     const doc = new jsPDF({
-      orientation: "portrait", // You can adjust this based on the aspect ratio of the image
-      unit: "px", // Use pixels for easier alignment
-      format: [imageSize.width, imageSize.height], // Match the page size to the image size
+      orientation: naturalWidth > naturalHeight ? "landscape" : "portrait",
+      unit: "px",
+      format: [naturalWidth, naturalHeight],
     });
 
-    // Add the uploaded image to the PDF, filling the entire page
     doc.addImage(
       uploadedImage,
-      "JPEG", // Adjust format if needed (e.g., "PNG")
-      0, // X offset
-      0, // Y offset
-      imageSize.width,
-      imageSize.height
+      "JPEG", // Use the appropriate format
+      0,
+      0,
+      naturalWidth,
+      naturalHeight
     );
 
     doc.save("exported-image.pdf");
@@ -217,17 +224,21 @@ const Editor: React.FC = () => {
         <div className="import-text">
           <p>Import</p>
         </div>
-        <button className="add-file-button">
-          <label htmlFor="file-input">Add File</label>
-          <input
-            type="file"
-            id="file-input"
-            ref={fileInputRef}
-            accept="image/*"
-            onChange={handleFileUpload}
-            style={{ display: "none" }}
-          />
+        <button
+          className="add-file-button"
+          onClick={() => fileInputRef.current?.click()} // Trigger the file input
+        >
+          Add File
         </button>
+        <input
+          type="file"
+          id="file-input"
+          ref={fileInputRef}
+          accept="image/*"
+          onChange={handleFileUpload}
+          style={{ display: "none" }} // Hide the input visually
+        />
+
         <div className="import-text">
           <p>Export</p>
           {/* Button for Exporting PDF */}
@@ -239,7 +250,7 @@ const Editor: React.FC = () => {
       <div className="canvas-container" ref={canvasRef}>
         <div className="canvas-area">
           {uploadedImage ? (
-            <Draggable bounds={getDraggableBounds()}>
+            <Draggable>
               <div
                 style={{
                   width: imageSize.width,
@@ -297,10 +308,10 @@ const Editor: React.FC = () => {
             </div>
           )}
         </div>
-        <div className="colors-panel">
-          <h3>Colors</h3>
+        {/* <div className="colors-panel">
+          <h3>Colors</h3> */}
           <ColorsList />
-        </div>{" "}
+        {/* </div>{" "} */}
       </div>
       <Toolbar onUndo={handleUndo} onRedo={handleRedo} />
     </div>
