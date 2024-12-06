@@ -3,34 +3,17 @@ import Toolbar from "../../components/Toolbar/Toolbar";
 import "./Editor.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
-import Draggable from "react-draggable";
 import { jsPDF } from "jspdf";
 import ColorsList from "../../components/ColorsList/ColorsList";
+import ImageCanvas from "../../components/ImageCanvas/ImageCanvas";
 
 const Editor: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState({ width: 500, height: 500 });
-  const [initialMousePosition, setInitialMousePosition] = useState({
-    x: 0,
-    y: 0,
-  });
-  const [isResizing, setIsResizing] = useState<{
-    active: boolean;
-    corner: string | null;
-  }>({
-    active: false,
-    corner: null,
-  });
-
   const [history, setHistory] = useState<any[]>([]); // History stack for undo/redo
   const [historyIndex, setHistoryIndex] = useState<number>(-1); // To track the current position in the history
-
-  const [colors, setColors] = useState<any[]>([]);
-
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const imageContainerRef = useRef<HTMLDivElement | null>(null);
-  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const [colors, setColors] = useState<any[]>([]); // Colors fetched from the server
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -38,7 +21,7 @@ const Editor: React.FC = () => {
       try {
         const response = await fetch("http://localhost:5001/colors");
         const data = await response.json();
-        setColors(data); // Set colors state
+        setColors(data);
       } catch (error) {
         console.error("Error fetching colors:", error);
       }
@@ -84,93 +67,27 @@ const Editor: React.FC = () => {
     pushToHistory(null, { width: 400, height: 400 }); // Save deletion to history
   };
 
-  const handleResizeStart = (e: React.MouseEvent, corner: string) => {
-    e.preventDefault();
-    setIsResizing({ active: true, corner });
-    setInitialMousePosition({ x: e.clientX, y: e.clientY });
+  const handleExportPDF = () => {
+    if (!uploadedImage) return;
+
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "px",
+      format: [imageSize.width, imageSize.height],
+    });
+
+    doc.addImage(
+      uploadedImage,
+      "JPEG", // Use the appropriate format
+      0,
+      0,
+      imageSize.width,
+      imageSize.height
+    );
+
+    doc.save("exported-image.pdf");
   };
 
-  const handleResizeMove = (e: MouseEvent) => {
-    if (isResizing.active) {
-      const deltaX = e.clientX - initialMousePosition.x;
-      const deltaY = e.clientY - initialMousePosition.y;
-
-      let newWidth = imageSize.width;
-      let newHeight = imageSize.height;
-
-      // Adjust dimensions based on the corner being dragged
-      if (
-        isResizing.corner === "top-left" ||
-        isResizing.corner === "bottom-left"
-      ) {
-        newWidth = imageSize.width - deltaX;
-      } else if (
-        isResizing.corner === "top-right" ||
-        isResizing.corner === "bottom-right"
-      ) {
-        newWidth = imageSize.width + deltaX;
-      }
-
-      if (
-        isResizing.corner === "top-left" ||
-        isResizing.corner === "top-right"
-      ) {
-        newHeight = imageSize.height - deltaY;
-      } else if (
-        isResizing.corner === "bottom-left" ||
-        isResizing.corner === "bottom-right"
-      ) {
-        newHeight = imageSize.height + deltaY;
-      }
-
-      // Apply minimum size constraints
-      if (newWidth > 100 && newHeight > 100) {
-        setImageSize({ width: newWidth, height: newHeight });
-        setInitialMousePosition({ x: e.clientX, y: e.clientY });
-      }
-    }
-  };
-
-  const handleResizeEnd = () => {
-    setIsResizing({ active: false, corner: null });
-    pushToHistory(uploadedImage, imageSize); // Save resize to history
-  };
-
-  useEffect(() => {
-    if (isResizing.active) {
-      window.addEventListener("mousemove", handleResizeMove);
-      window.addEventListener("mouseup", handleResizeEnd);
-    } else {
-      window.removeEventListener("mousemove", handleResizeMove);
-      window.removeEventListener("mouseup", handleResizeEnd);
-    }
-
-    return () => {
-      window.removeEventListener("mousemove", handleResizeMove);
-      window.removeEventListener("mouseup", handleResizeEnd);
-    };
-  }, [isResizing.active]);
-
-  const getDraggableBounds = () => {
-    if (canvasRef.current) {
-      const canvasRect = canvasRef.current.getBoundingClientRect();
-      return {
-        top: -canvasRect.height + imageSize.height,
-        left: -canvasRect.width + imageSize.width,
-        right: canvasRect.width - imageSize.width,
-        bottom: canvasRect.height - imageSize.height,
-      };
-    }
-    return {};
-  };
-
-  const handlePlusClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  // Undo function
   const handleUndo = () => {
     if (historyIndex > 0) {
       const prevHistory = history[historyIndex - 1];
@@ -180,7 +97,6 @@ const Editor: React.FC = () => {
     }
   };
 
-  // Redo function
   const handleRedo = () => {
     if (historyIndex < history.length - 1) {
       const nextHistory = history[historyIndex + 1];
@@ -190,33 +106,15 @@ const Editor: React.FC = () => {
     }
   };
 
-  const handleExportPDF = () => {
-    if (!uploadedImage || !imageRef.current) return;
-
-    // Use the natural dimensions of the image
-    const naturalWidth = imageRef.current.naturalWidth;
-    const naturalHeight = imageRef.current.naturalHeight;
-
-    const doc = new jsPDF({
-      orientation: naturalWidth > naturalHeight ? "landscape" : "portrait",
-      unit: "px",
-      format: [naturalWidth, naturalHeight],
-    });
-
-    doc.addImage(
-      uploadedImage,
-      "JPEG", // Use the appropriate format
-      0,
-      0,
-      naturalWidth,
-      naturalHeight
-    );
-
-    doc.save("exported-image.pdf");
+  const handlePlusClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   return (
     <div className="editor-container">
+      {/* Sidebar */}
       <div className="hamburger-menu" onClick={toggleSidebar}>
         <FontAwesomeIcon icon={faBars} />
       </div>
@@ -247,72 +145,30 @@ const Editor: React.FC = () => {
           </button>
         </div>
       </div>
-      <div className="canvas-container" ref={canvasRef}>
-        <div className="canvas-area">
-          {uploadedImage ? (
-            <Draggable>
-              <div
-                style={{
-                  width: imageSize.width,
-                  height: imageSize.height,
-                  position: "relative",
-                  display: "inline-block",
-                }}
-                ref={imageContainerRef}
-              >
-                <img
-                  src={uploadedImage}
-                  alt="Uploaded Preview"
-                  className="uploaded-image"
-                  ref={imageRef}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "contain",
-                    border: "2px solid #ccc",
-                  }}
-                />
-                {/* Close (X) Button */}
-                <div className="image-close-button" onClick={handleDeleteImage}>
-                  &times;
-                </div>
 
-                {/* Resize Handles */}
-                <div
-                  className="resize-handle top-left"
-                  onMouseDown={(e) => handleResizeStart(e, "top-left")}
-                  style={{ top: 0, left: 0 }}
-                />
-                <div
-                  className="resize-handle top-right"
-                  onMouseDown={(e) => handleResizeStart(e, "top-right")}
-                  style={{ top: 0, right: 0 }}
-                />
-                <div
-                  className="resize-handle bottom-left"
-                  onMouseDown={(e) => handleResizeStart(e, "bottom-left")}
-                  style={{ bottom: 0, left: 0 }}
-                />
-                <div
-                  className="resize-handle bottom-right"
-                  onMouseDown={(e) => handleResizeStart(e, "bottom-right")}
-                  style={{ bottom: 0, right: 0 }}
-                />
-              </div>
-            </Draggable>
-          ) : (
-            <div className="plus-sign">
-              <p onClick={handlePlusClick} style={{ cursor: "pointer" }}>
-                +
-              </p>
-            </div>
-          )}
-        </div>
-        {/* <div className="colors-panel">
-          <h3>Colors</h3> */}
-          <ColorsList />
-        {/* </div>{" "} */}
+      {/* Canvas Container */}
+      <div className="canvas-container">
+        {uploadedImage ? (
+          <ImageCanvas
+            uploadedImage={uploadedImage}
+            width={imageSize.width}
+            height={imageSize.height}
+            onSegmentsUpdated={(segments) =>
+              console.log("Segments:", segments)
+            }
+            onDeleteImage={handleDeleteImage}
+          />
+        ) : (
+          <div className="plus-sign">
+            <p onClick={handlePlusClick} style={{ cursor: "pointer" }}>
+              +
+            </p>
+          </div>
+        )}
+        {uploadedImage && <ColorsList />}
       </div>
+
+      {/* Toolbar */}
       <Toolbar onUndo={handleUndo} onRedo={handleRedo} />
     </div>
   );

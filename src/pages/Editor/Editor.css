@@ -93,7 +93,7 @@
 .uploaded-image {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Ensures the image scales correctly */
+  object-fit: contain;
   border: 2px solid #ccc;
   transition: width 0.2s ease, height 0.2s ease;
 }
@@ -174,38 +174,7 @@
   font-size: 3rem;
 }
 
-.image-close-button {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 24px;
-  height: 24px;
-  background-color: #a90e03;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s ease, background-color 0.2s ease;
-  z-index: 10;
-}
-
-.image-close-button:hover {
-  background-color: #640303;
-  transform: scale(1.1);
-}
-
 @media (max-width: 768px) {
-  .canvas {
-    width: 90%;
-    height: 60%;
-  }
-
   .properties-panel {
     height: 150px;
   }
@@ -215,8 +184,8 @@
   }
 
   .hamburger-menu {
-    width: 35px;
-    height: 35px;
+    width: 25px;
+    height: 25px;
   }
 
   .add-file-button {
@@ -225,11 +194,6 @@
   }
 
   .export-button {
-    padding: 0.3rem 0.6rem;
-    font-size: 0.8rem;
-  }
-
-  .delete-image-button {
     padding: 0.3rem 0.6rem;
     font-size: 0.8rem;
   }
