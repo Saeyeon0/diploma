@@ -30,6 +30,23 @@ const Editor: React.FC = () => {
     fetchColors();
   }, []);
 
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      if (window.innerWidth <= 480) {
+        setImageSize({ width: 150, height: 150 });
+      } else if (window.innerWidth <= 768) {
+        setImageSize({ width: 400, height: 400 });
+      } else {
+        setImageSize({ width: 550, height: 550 });
+      }
+    };
+  
+    updateCanvasSize();
+    window.addEventListener("resize", updateCanvasSize);
+    return () => window.removeEventListener("resize", updateCanvasSize);
+  }, []);
+  
+  
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
   };

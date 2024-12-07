@@ -18,18 +18,22 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
   onDeleteImage,
 }) => {
   const fabricCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const fabricInstanceRef = useRef<fabric.Canvas | null>(null);
+  const fabricInstanceRef = useRef<fabric.Canvas | null>(null); // Create a reference for the Fabric.js canvas
 
+  // Initialize the Fabric.js canvas
   useEffect(() => {
     if (fabricCanvasRef.current) {
+      const newWidth = window.innerWidth <= 480 ? 150 : window.innerWidth <= 768 ? 400 : 550;
+      const newHeight = newWidth; // Maintain a square aspect ratio
+
       const fabricCanvas = new fabric.Canvas(fabricCanvasRef.current, {
-        width,
-        height,
+        width: newWidth,
+        height: newHeight,
         backgroundColor: "#f0f0f0",
         preserveObjectStacking: true,
       });
 
-      fabricInstanceRef.current = fabricCanvas;
+      fabricInstanceRef.current = fabricCanvas; // Assign Fabric canvas to the ref
 
       // Cleanup function to dispose the canvas
       return () => {
@@ -37,7 +41,8 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
       };
     }
   }, [width, height]);
-
+  
+  // Upload and render image on Fabric.js canvas
   useEffect(() => {
     if (uploadedImage && fabricInstanceRef.current) {
       fabric.Image.fromURL(uploadedImage, (img) => {
@@ -60,26 +65,55 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
   // Example function for detecting and segmenting shapes (mock logic)
   const segmentImage = () => {
     if (fabricInstanceRef.current) {
-      const objects = fabricInstanceRef.current.getObjects();
-      // Example: Create a mock segmentation by splitting the canvas into rectangles
-      const segments = [];
-      for (let i = 0; i < 3; i++) {
-        const rect = new fabric.Rect({
-          left: i * 100,
-          top: i * 100,
-          width: 100,
-          height: 100,
-          fill: `rgb(${50 * i}, ${100 + i * 50}, ${150 - i * 30})`,
-          selectable: true,
-        });
-        fabricInstanceRef.current.add(rect);
-        segments.push(rect);
+      const canvas = fabricInstanceRef.current;
+  
+      const imageObj = canvas.getObjects("image")[0] as fabric.Image;
+  
+      if (!imageObj) return;
+  
+      const imgElement = imageObj.getElement();
+      const tempCanvas = document.createElement("canvas");
+      const tempCtx = tempCanvas.getContext("2d");
+  
+      if (!tempCtx || !imgElement) return;
+  
+      tempCanvas.width = imageObj.width!;
+      tempCanvas.height = imageObj.height!;
+      tempCtx.drawImage(imgElement, 0, 0);
+  
+      const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      const data = imageData.data;
+      const segments: fabric.Rect[] = [];
+  
+      const step = 20; // Step size for pixel grouping
+  
+      for (let y = 0; y < tempCanvas.height; y += step) {
+        for (let x = 0; x < tempCanvas.width; x += step) {
+          const i = (y * tempCanvas.width + x) * 4;
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+  
+          const rect = new fabric.Rect({
+            left: x,
+            top: y,
+            width: step,
+            height: step,
+            fill: `rgb(${r}, ${g}, ${b})`,
+            selectable: true,
+            opacity: 0.6,
+          });
+  
+          canvas.add(rect);
+          segments.push(rect);
+        }
       }
-
-      fabricInstanceRef.current.renderAll();
+  
+      canvas.renderAll();
       onSegmentsUpdated?.(segments);
     }
   };
+  
 
   return (
     <div className="image-canvas-container">

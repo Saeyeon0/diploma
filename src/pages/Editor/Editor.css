@@ -81,9 +81,9 @@
 .canvas-area {
   position: relative;
   width: 100%;
-  max-width: 800px; /* Set a maximum width to avoid excessive stretching */
+  max-width: 800px;
   height: auto;
-  max-height: 80vh; /* Limit the height to prevent overflow */
+  max-height: 80vh;
   background-color: #ffffff;
   border: 1px dashed #cccccc;
   display: flex;
@@ -204,5 +204,10 @@
 
   .canvas-container {
     padding: 0.5rem;
+  }
+
+  .uploaded-image {
+    width: 100px;
+    height: 100px;
   }
 }
