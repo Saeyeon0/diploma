@@ -10,7 +10,7 @@ import ImageCanvas from "../../components/ImageCanvas/ImageCanvas";
 const Editor: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [imageSize, setImageSize] = useState({ width: 500, height: 500 });
+  const [imageSize, setImageSize] = useState({ width: 600, height: 600 });
   const [history, setHistory] = useState<any[]>([]); // History stack for undo/redo
   const [historyIndex, setHistoryIndex] = useState<number>(-1); // To track the current position in the history
   const [colors, setColors] = useState<any[]>([]); // Colors fetched from the server
@@ -60,11 +60,11 @@ const Editor: React.FC = () => {
 
   const handleDeleteImage = () => {
     setUploadedImage(null);
-    setImageSize({ width: 400, height: 400 }); // Reset size
+    setImageSize({ width: 600, height: 600 }); // Reset size
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    pushToHistory(null, { width: 400, height: 400 }); // Save deletion to history
+    pushToHistory(null, { width: 600, height: 600 }); // Save deletion to history
   };
 
   const handleExportPDF = () => {
