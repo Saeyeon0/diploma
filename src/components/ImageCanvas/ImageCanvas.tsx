@@ -62,6 +62,19 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
     }
   }, [uploadedImage, width, height]);
 
+  useEffect(() => {
+    const checkOpenCV = () => {
+      if (cv && cv.getBuildInformation) {
+        console.log("OpenCV loaded successfully!");
+      } else {
+        setTimeout(checkOpenCV, 100);
+      }
+    };
+  
+    checkOpenCV();
+  }, []);
+  
+
   // Example function for detecting and segmenting shapes (mock logic)
   const segmentImage = () => {
     if (fabricInstanceRef.current) {
@@ -77,42 +90,53 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
   
       if (!tempCtx || !imgElement) return;
   
+      // Set canvas size
       tempCanvas.width = imageObj.width!;
       tempCanvas.height = imageObj.height!;
+  
+      // Draw the original image onto the temporary canvas
       tempCtx.drawImage(imgElement, 0, 0);
   
-      const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-      const data = imageData.data;
-      const segments: fabric.Rect[] = [];
+      // Get image data
+      const src = cv.imread(tempCanvas);
+      const dst = new cv.Mat();
   
-      const step = 20; // Step size for pixel grouping
+      // Convert to grayscale
+      cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY);
   
-      for (let y = 0; y < tempCanvas.height; y += step) {
-        for (let x = 0; x < tempCanvas.width; x += step) {
-          const i = (y * tempCanvas.width + x) * 4;
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
+      // Apply Canny edge detection
+      cv.Canny(src, dst, 50, 150);
   
-          const rect = new fabric.Rect({
-            left: x,
-            top: y,
-            width: step,
-            height: step,
-            fill: `rgb(${r}, ${g}, ${b})`,
-            selectable: true,
-            opacity: 0.6,
-          });
+      // Create a white background image
+      const whiteBackground = new cv.Mat.zeros(dst.rows, dst.cols, cv.CV_8UC3);
+      whiteBackground.setTo(new cv.Scalar(255, 255, 255)); // Set to white
   
-          canvas.add(rect);
-          segments.push(rect);
+      // Copy the edges onto the white background
+      for (let i = 0; i < dst.rows; i++) {
+        for (let j = 0; j < dst.cols; j++) {
+          if (dst.ucharPtr(i, j)[0] !== 0) {
+            whiteBackground.ucharPtr(i, j)[0] = 0;   // Set black color for detected edge (B)
+            whiteBackground.ucharPtr(i, j)[1] = 0;   // (G)
+            whiteBackground.ucharPtr(i, j)[2] = 0;   // (R)
+          }
         }
       }
   
+      // Display the result on the Fabric canvas
+      cv.imshow(tempCanvas, whiteBackground);
+  
+      const resultImage = new fabric.Image(tempCanvas);
+  
+      canvas.clear();
+      canvas.add(resultImage);
       canvas.renderAll();
-      onSegmentsUpdated?.(segments);
+  
+      // Cleanup
+      src.delete();
+      dst.delete();
+      whiteBackground.delete();
     }
-  };
+  };  
   
 
   return (
