@@ -168,8 +168,8 @@ const Editor: React.FC = () => {
         {uploadedImage ? (
           <ImageCanvas
             uploadedImage={uploadedImage}
-            width={imageSize.width}
-            height={imageSize.height}
+            // width={imageSize.width}
+            // height={imageSize.height}
             onSegmentsUpdated={(segments) =>
               console.log("Segments:", segments)
             }

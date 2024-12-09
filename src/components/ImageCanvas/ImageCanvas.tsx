@@ -4,16 +4,12 @@ import "./ImageCanvas.css"; // Import the CSS file for styles
 
 interface ImageCanvasProps {
   uploadedImage: string | null;
-  width: number;
-  height: number;
   onSegmentsUpdated?: (segments: any[]) => void; // Callback to send updated segments back to the parent
   onDeleteImage: () => void; // Callback to handle image deletion
 }
 
 const ImageCanvas: React.FC<ImageCanvasProps> = ({
   uploadedImage,
-  width,
-  height,
   onSegmentsUpdated,
   onDeleteImage,
 }) => {
@@ -23,15 +19,12 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
   // Initialize the Fabric.js canvas
   useEffect(() => {
     if (fabricCanvasRef.current) {
-      const newWidth = window.innerWidth <= 480 ? 150 : window.innerWidth <= 768 ? 400 : 550;
-      const newHeight = newWidth; // Maintain a square aspect ratio
-
-      const fabricCanvas = new fabric.Canvas(fabricCanvasRef.current, {
-        width: newWidth,
-        height: newHeight,
-        backgroundColor: "#f0f0f0",
-        preserveObjectStacking: true,
-      });
+        const fabricCanvas = new fabric.Canvas(fabricCanvasRef.current, {
+          width: 700,
+          height: 700,
+          backgroundColor: "#f0f0f0",
+          preserveObjectStacking: true,
+        });
 
       fabricInstanceRef.current = fabricCanvas; // Assign Fabric canvas to the ref
 
@@ -40,27 +33,21 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
         fabricCanvas.dispose();
       };
     }
-  }, [width, height]);
+  }, []);
   
   // Upload and render image on Fabric.js canvas
   useEffect(() => {
     if (uploadedImage && fabricInstanceRef.current) {
-      fabric.Image.fromURL(uploadedImage, (img) => {
-        const scaleFactor = 1; // Adjust this factor to make the image bigger or smaller
-
-        img.set({
-          left: 0,
-          top: 0,
-          scaleX: (width / img.width!) * scaleFactor, // Apply scale factor to width
-          scaleY: (height / img.height!) * scaleFactor, // Apply scale factor to height
+        fabric.Image.fromURL(uploadedImage, (img) => {
+          img.scaleToWidth(550);
+          img.scaleToHeight(550);
+  
+          fabricInstanceRef.current?.clear();
+          fabricInstanceRef.current?.add(img);
+          fabricInstanceRef.current?.renderAll();
         });
-
-        fabricInstanceRef.current?.clear(); // Clear the canvas before adding a new image
-        fabricInstanceRef.current?.add(img);
-        fabricInstanceRef.current?.renderAll();
-      });
-    }
-  }, [uploadedImage, width, height]);
+      }
+    }, [uploadedImage]);
 
   useEffect(() => {
     const checkOpenCV = () => {
@@ -73,7 +60,6 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
   
     checkOpenCV();
   }, []);
-  
 
   // Example function for detecting and segmenting shapes (mock logic)
   const segmentImage = () => {
@@ -98,35 +84,53 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
       tempCtx.drawImage(imgElement, 0, 0);
   
       // Get image data
+      const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      const data = imageData.data;
+  
+      // Extract unique colors
+      const colorSet = new Set<string>();
+  
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const a = data[i + 3];
+  
+        // Ignore fully transparent pixels
+        if (a > 0) {
+          const color = `rgb(${r}, ${g}, ${b})`;
+          colorSet.add(color);
+        }
+      }
+  
+      const uniqueColors = Array.from(colorSet);
+  
+      // Pass unique colors to the parent component
+      onSegmentsUpdated?.(uniqueColors);
+  
+      // Edge detection logic (as before)
       const src = cv.imread(tempCanvas);
       const dst = new cv.Mat();
   
-      // Convert to grayscale
       cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY);
-  
-      // Apply Canny edge detection
       cv.Canny(src, dst, 50, 150);
   
-      // Create a white background image
       const whiteBackground = new cv.Mat.zeros(dst.rows, dst.cols, cv.CV_8UC3);
-      whiteBackground.setTo(new cv.Scalar(255, 255, 255)); // Set to white
+      whiteBackground.setTo(new cv.Scalar(255, 255, 255));
   
-      // Copy the edges onto the white background
       for (let i = 0; i < dst.rows; i++) {
         for (let j = 0; j < dst.cols; j++) {
           if (dst.ucharPtr(i, j)[0] !== 0) {
-            whiteBackground.ucharPtr(i, j)[0] = 0;   // Set black color for detected edge (B)
-            whiteBackground.ucharPtr(i, j)[1] = 0;   // (G)
-            whiteBackground.ucharPtr(i, j)[2] = 0;   // (R)
+            whiteBackground.ucharPtr(i, j)[0] = 0;
+            whiteBackground.ucharPtr(i, j)[1] = 0;
+            whiteBackground.ucharPtr(i, j)[2] = 0;
           }
         }
       }
   
-      // Display the result on the Fabric canvas
       cv.imshow(tempCanvas, whiteBackground);
   
       const resultImage = new fabric.Image(tempCanvas);
-  
       canvas.clear();
       canvas.add(resultImage);
       canvas.renderAll();
@@ -138,7 +142,6 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
     }
   };  
   
-
   return (
     <div className="image-canvas-container">
       {uploadedImage && (

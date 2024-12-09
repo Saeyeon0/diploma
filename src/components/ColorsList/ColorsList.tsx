@@ -14,12 +14,21 @@ const ColorsList: React.FC = () => {
   const [displayCount, setDisplayCount] = useState<number>(24); // State for the number of colors to display
 
   // Define the sets of colors for 6 and 12
-  const sixColors = [
-    "Red", "Blue", "Green", "Yellow", "White", "Black"
-  ];
+  const sixColors = ["Red", "Blue", "Green", "Yellow", "White", "Black"];
 
   const twelveColors = [
-    "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink", "Sand Yellow", "White", "Gray", "Dark Brown", "Black"
+    "Red",
+    "Orange",
+    "Yellow",
+    "Green",
+    "Blue",
+    "Purple",
+    "Pink",
+    "Sand Yellow",
+    "White",
+    "Gray",
+    "Dark Brown",
+    "Black",
   ];
 
   // Fetch colors from the server
@@ -32,11 +41,13 @@ const ColorsList: React.FC = () => {
         return response.json();
       })
       .then((data) => {
-        const sortedColors = data.sort((a: { order: number }, b: { order: number }) => {
-          const orderA = a.order || 0;  // Default to 0 if 'order' is missing
-          const orderB = b.order || 0;  // Default to 0 if 'order' is missing
-          return orderA - orderB;
-        });
+        const sortedColors = data.sort(
+          (a: { order: number }, b: { order: number }) => {
+            const orderA = a.order || 0; // Default to 0 if 'order' is missing
+            const orderB = b.order || 0; // Default to 0 if 'order' is missing
+            return orderA - orderB;
+          }
+        );
         setColors(sortedColors); // Set the fetched data to state
         setLoading(false); // Set loading to false
       })
@@ -48,7 +59,7 @@ const ColorsList: React.FC = () => {
   }, []); // Empty array ensures this effect runs only once after the initial render
 
   // Filter colors based on the selected count
-  const filteredColors = colors.filter(color => {
+  const filteredColors = colors.filter((color) => {
     if (displayCount === 6) {
       return sixColors.includes(color.name); // Filter for 6 specific colors
     } else if (displayCount === 12) {
@@ -57,7 +68,9 @@ const ColorsList: React.FC = () => {
     return true; // Display all colors for 24
   });
 
-  const handleDropdownChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleDropdownChange = (
+    event: React.ChangeEvent<HTMLSelectElement>
+  ) => {
     setDisplayCount(Number(event.target.value)); // Update the display count based on dropdown selection
   };
 
