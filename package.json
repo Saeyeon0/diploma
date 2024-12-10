@@ -18,6 +18,8 @@
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.7.9",
     "color-diff": "^1.4.0",
+    "color-thief-node": "^1.0.4",
+    "colorthief": "^2.6.0",
     "cors": "^2.8.5",
     "express": "^4.21.1",
     "fabric": "^4.6.0",

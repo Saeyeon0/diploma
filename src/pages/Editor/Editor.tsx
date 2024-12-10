@@ -75,6 +75,13 @@ const Editor: React.FC = () => {
     }
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const imageUrl = URL.createObjectURL(event.target.files[0]);
+      setUploadedImage(imageUrl);
+    }
+  };
+
   const handleDeleteImage = () => {
     setUploadedImage(null);
     setImageSize({ width: 600, height: 600 }); // Reset size
@@ -182,7 +189,9 @@ const Editor: React.FC = () => {
             </p>
           </div>
         )}
-        {uploadedImage && <ColorsList />}
+        {/* <input type="file" accept="image/*" onChange={handleImageUpload} />
+      {uploadedImage && <img src={uploadedImage} alt="Uploaded" className="preview-image" />} */}
+      <ColorsList uploadedImage={uploadedImage} />
       </div>
 
       {/* Toolbar */}

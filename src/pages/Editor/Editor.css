@@ -38,6 +38,10 @@
   font-size: 1.5rem;
 }
 
+.hamburger-menu:hover {
+  color: #b5e0d3;
+}
+
 .add-file-button {
   display: flex;
   align-items: center;

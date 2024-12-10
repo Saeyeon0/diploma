@@ -1,35 +1,24 @@
 import React, { useEffect, useState } from "react";
+import ColorThief from "colorthief";
 import "./ColorsList.css";
 
 interface Color {
+  _id: string;
   name: string;
   hex: string;
   order: number;
 }
 
-const ColorsList: React.FC = () => {
-  const [colors, setColors] = useState<Color[]>([]); // State to hold the fetched colors
-  const [loading, setLoading] = useState<boolean>(true); // Loading state
-  const [error, setError] = useState<string | null>(null); // Error state
-  const [displayCount, setDisplayCount] = useState<number>(24); // State for the number of colors to display
+interface ColorsListProps {
+  uploadedImage: string | null;
+}
 
-  // Define the sets of colors for 6 and 12
-  const sixColors = ["Red", "Blue", "Green", "Yellow", "White", "Black"];
-
-  const twelveColors = [
-    "Red",
-    "Orange",
-    "Yellow",
-    "Green",
-    "Blue",
-    "Purple",
-    "Pink",
-    "Sand Yellow",
-    "White",
-    "Gray",
-    "Dark Brown",
-    "Black",
-  ];
+const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
+  const [colors, setColors] = useState<Color[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [highlightedColors, setHighlightedColors] = useState<Color[]>([]);
+  const [isVisible, setIsVisible] = useState<boolean>(true); // State to manage visibility of colors list
 
   // Fetch colors from the server
   useEffect(() => {
@@ -42,36 +31,95 @@ const ColorsList: React.FC = () => {
       })
       .then((data) => {
         const sortedColors = data.sort(
-          (a: { order: number }, b: { order: number }) => {
-            const orderA = a.order || 0; // Default to 0 if 'order' is missing
-            const orderB = b.order || 0; // Default to 0 if 'order' is missing
-            return orderA - orderB;
-          }
+          (a: Color, b: Color) => a.order - b.order
         );
-        setColors(sortedColors); // Set the fetched data to state
-        setLoading(false); // Set loading to false
+        setColors(sortedColors);
+        setLoading(false);
       })
       .catch((error) => {
         console.error("Error fetching colors:", error);
         setError("Failed to load colors. Please try again.");
-        setLoading(false); // Stop loading
+        setLoading(false);
       });
-  }, []); // Empty array ensures this effect runs only once after the initial render
+  }, []);
 
-  // Filter colors based on the selected count
-  const filteredColors = colors.filter((color) => {
-    if (displayCount === 6) {
-      return sixColors.includes(color.name); // Filter for 6 specific colors
-    } else if (displayCount === 12) {
-      return twelveColors.includes(color.name); // Filter for 12 specific colors
-    }
-    return true; // Display all colors for 24
-  });
+  // Utility to convert HEX to RGB
+  const hexToRgb = (hex: string): [number, number, number] => {
+    const bigint = parseInt(hex.slice(1), 16);
+    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+  };
 
-  const handleDropdownChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
+  // Calculate color distance
+  const colorDistance = (
+    rgb1: [number, number, number],
+    rgb2: [number, number, number]
   ) => {
-    setDisplayCount(Number(event.target.value)); // Update the display count based on dropdown selection
+    return Math.sqrt(
+      (rgb1[0] - rgb2[0]) ** 2 +
+        (rgb1[1] - rgb2[1]) ** 2 +
+        (rgb1[2] - rgb2[2]) ** 2
+    );
+  };
+
+  // Find the closest color from the database
+  const findClosestColor = (
+    extractedColor: [number, number, number],
+    dbColors: Color[]
+  ) => {
+    let closestColor = dbColors[0];
+    let minDistance = Infinity;
+
+    dbColors.forEach((dbColor) => {
+      const dbRgb = hexToRgb(dbColor.hex);
+      const distance = colorDistance(extractedColor, dbRgb);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestColor = dbColor;
+      }
+    });
+
+    return closestColor;
+  };
+
+  // Extract and match colors using ColorThief
+  useEffect(() => {
+    if (uploadedImage && colors.length > 0) {
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.src = uploadedImage;
+
+      img.onload = () => {
+        const colorThief = new ColorThief();
+        let extractedColors = colorThief.getPalette(img, 24) as [
+          number,
+          number,
+          number
+        ][]; // Get up to 24 colors
+
+        // Map extracted colors to the closest colors from the database
+        const matchedColors: Color[] = [];
+        const usedColorIds = new Set<string>();
+
+        extractedColors.forEach((extractedColor) => {
+          const closestColor = findClosestColor(extractedColor, colors);
+          if (!usedColorIds.has(closestColor._id)) {
+            matchedColors.push(closestColor);
+            usedColorIds.add(closestColor._id);
+          }
+        });
+
+        setHighlightedColors(matchedColors);
+      };
+
+      img.onerror = () => {
+        console.error("Failed to load the image for color extraction.");
+      };
+    }
+  }, [uploadedImage, colors]);
+
+  // Toggle visibility of the colors list
+  const toggleVisibility = () => {
+    setIsVisible(!isVisible);
   };
 
   if (loading) {
@@ -85,28 +133,40 @@ const ColorsList: React.FC = () => {
   return (
     <div className="colors-panel">
       <h3>Colors</h3>
-      <select onChange={handleDropdownChange} value={displayCount}>
-        <option value={6}>6</option>
-        <option value={12}>12</option>
-        <option value={24}>24</option>
-      </select>
+      <button className="close-button" onClick={toggleVisibility}>
+        {/* Change the button content based on visibility */}
+        {isVisible ? "✕" : "↓"}
+      </button>
 
-      <div className="colors-list">
-        {filteredColors.length > 0 ? (
-          filteredColors.map((color, index) => (
-            <div
-              key={index}
-              className="color-item"
-              style={{ backgroundColor: color.hex }}
-              title={color.name} // Tooltip to show color name
-            >
-              {color.name}
-            </div>
-          ))
-        ) : (
-          <p>No colors available</p>
-        )}
-      </div>
+      {/* Render the colors list only if it is visible */}
+      {isVisible && (
+        <div className="colors-list">
+          {highlightedColors.length > 0 ? (
+            highlightedColors.map((color, index) => (
+              <div
+                key={index}
+                className="color-item"
+                style={{ backgroundColor: color.hex }}
+                title={color.name}
+              >
+                {color.name}
+              </div>
+            ))
+          ) : (
+            // If no highlighted colors, show all colors from the database
+            colors.map((color, index) => (
+              <div
+                key={index}
+                className="color-item"
+                style={{ backgroundColor: color.hex }}
+                title={color.name}
+              >
+                {color.name}
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 };
