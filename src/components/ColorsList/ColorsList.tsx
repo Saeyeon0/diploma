@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import ColorThief from "colorthief";
 import "./ColorsList.css";
 
@@ -7,6 +7,7 @@ interface Color {
   name: string;
   hex: string;
   order: number;
+  number?: number; // Optional number field for assigned numbers
 }
 
 interface ColorsListProps {
@@ -18,7 +19,8 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [highlightedColors, setHighlightedColors] = useState<Color[]>([]);
-  const [isVisible, setIsVisible] = useState<boolean>(true); // State to manage visibility of colors list
+  const [isVisible, setIsVisible] = useState<boolean>(false); // Initially hidden
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Fetch colors from the server
   useEffect(() => {
@@ -30,9 +32,7 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
         return response.json();
       })
       .then((data) => {
-        const sortedColors = data.sort(
-          (a: Color, b: Color) => a.order - b.order
-        );
+        const sortedColors = data.sort((a: Color, b: Color) => a.order - b.order);
         setColors(sortedColors);
         setLoading(false);
       })
@@ -50,22 +50,12 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   };
 
   // Calculate color distance
-  const colorDistance = (
-    rgb1: [number, number, number],
-    rgb2: [number, number, number]
-  ) => {
-    return Math.sqrt(
-      (rgb1[0] - rgb2[0]) ** 2 +
-        (rgb1[1] - rgb2[1]) ** 2 +
-        (rgb1[2] - rgb2[2]) ** 2
-    );
+  const colorDistance = (rgb1: [number, number, number], rgb2: [number, number, number]) => {
+    return Math.sqrt((rgb1[0] - rgb2[0]) ** 2 + (rgb1[1] - rgb2[1]) ** 2 + (rgb1[2] - rgb2[2]) ** 2);
   };
 
   // Find the closest color from the database
-  const findClosestColor = (
-    extractedColor: [number, number, number],
-    dbColors: Color[]
-  ) => {
+  const findClosestColor = (extractedColor: [number, number, number], dbColors: Color[]) => {
     let closestColor = dbColors[0];
     let minDistance = Infinity;
 
@@ -89,26 +79,41 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
       img.src = uploadedImage;
 
       img.onload = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        // Draw the image on the canvas
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0, img.width, img.height);
+
         const colorThief = new ColorThief();
-        let extractedColors = colorThief.getPalette(img, 24) as [
-          number,
-          number,
-          number
-        ][]; // Get up to 24 colors
+        const extractedColors = colorThief.getPalette(img, 24) as [number, number, number][]; // Get up to 24 colors
 
         // Map extracted colors to the closest colors from the database
         const matchedColors: Color[] = [];
         const usedColorIds = new Set<string>();
+        let colorCounter = 1;
 
-        extractedColors.forEach((extractedColor) => {
+        extractedColors.forEach((extractedColor, index) => {
           const closestColor = findClosestColor(extractedColor, colors);
           if (!usedColorIds.has(closestColor._id)) {
-            matchedColors.push(closestColor);
+            matchedColors.push({ ...closestColor, number: colorCounter });
             usedColorIds.add(closestColor._id);
+
+            // Overlay the number on the canvas at random positions
+            ctx.fillStyle = "#000";
+            ctx.font = "20px Arial";
+            ctx.fillText(`${colorCounter}`, 20 + index * 30, 40 + index * 30);
+            colorCounter++;
           }
         });
 
         setHighlightedColors(matchedColors);
+        setIsVisible(true); // Show the panel after colors are highlighted
       };
 
       img.onerror = () => {
@@ -134,33 +139,22 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
     <div className="colors-panel">
       <h3>Colors</h3>
       <button className="close-button" onClick={toggleVisibility}>
-        {/* Change the button content based on visibility */}
         {isVisible ? "✕" : "↓"}
       </button>
 
-      {/* Render the colors list only if it is visible */}
+      <canvas ref={canvasRef} className="image-canvas"></canvas>
+
       {isVisible && (
         <div className="colors-list">
           {highlightedColors.length > 0 ? (
             highlightedColors.map((color, index) => (
-              <div
-                key={index}
-                className="color-item"
-                style={{ backgroundColor: color.hex }}
-                title={color.name}
-              >
-                {color.name}
+              <div key={index} className="color-item" style={{ backgroundColor: color.hex }}>
+                <span className="color-number">{color.number}</span> {color.name}
               </div>
             ))
           ) : (
-            // If no highlighted colors, show all colors from the database
             colors.map((color, index) => (
-              <div
-                key={index}
-                className="color-item"
-                style={{ backgroundColor: color.hex }}
-                title={color.name}
-              >
+              <div key={index} className="color-item" style={{ backgroundColor: color.hex }}>
                 {color.name}
               </div>
             ))
