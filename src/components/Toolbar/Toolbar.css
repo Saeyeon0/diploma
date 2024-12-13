@@ -29,6 +29,14 @@
   .toolbar-button:focus {
     outline: none;
   }
+
+  .canvas {
+    position: relative;
+    width: auto;
+    height: auto;
+    margin-top: 200px;
+    background-color: #f4f4f4;
+  }
   
   @media (max-width: 768px) {
     .toolbar-button {
