@@ -3,9 +3,9 @@ import { fabric } from "fabric";
 import "./ImageCanvas.css"; // Import the CSS file for styles
 
 interface ImageCanvasProps {
-  uploadedImage: string | null;
-  onSegmentsUpdated?: (segments: any[]) => void; // Callback to send updated segments back to the parent
-  onDeleteImage: () => void; // Callback to handle image deletion
+  uploadedImage: string;
+  onSegmentsUpdated?: (segmentedImageUrl: string) => void; // Accepts a string
+  onDeleteImage: () => void;
 }
 
 const ImageCanvas: React.FC<ImageCanvasProps> = ({
@@ -63,84 +63,72 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
 
   // Example function for detecting and segmenting shapes (mock logic)
   const segmentImage = () => {
-    if (fabricInstanceRef.current) {
-      const canvas = fabricInstanceRef.current;
+    if (!fabricInstanceRef.current) return;
   
-      const imageObj = canvas.getObjects("image")[0] as fabric.Image;
+    const canvas = fabricInstanceRef.current;
   
-      if (!imageObj) return;
+    // Get the first image object on the canvas
+    const imageObj = canvas.getObjects("image")[0] as fabric.Image;
+    if (!imageObj) return;
   
-      const imgElement = imageObj.getElement();
-      const tempCanvas = document.createElement("canvas");
-      const tempCtx = tempCanvas.getContext("2d");
+    // Get the image element and context
+    const imgElement = imageObj.getElement();
+    const tempCanvas = document.createElement("canvas");
+    const tempCtx = tempCanvas.getContext("2d");
+    if (!tempCtx || !imgElement) return;
   
-      if (!tempCtx || !imgElement) return;
+    // Set canvas size
+    tempCanvas.width = imageObj.width!;
+    tempCanvas.height = imageObj.height!;
   
-      // Set canvas size
-      tempCanvas.width = imageObj.width!;
-      tempCanvas.height = imageObj.height!;
+    // Draw the original image onto the temporary canvas
+    tempCtx.drawImage(imgElement, 0, 0);
   
-      // Draw the original image onto the temporary canvas
-      tempCtx.drawImage(imgElement, 0, 0);
+    // --- Perform Edge Detection ---
   
-      // Get image data
-      const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-      const data = imageData.data;
+    const src = cv.imread(tempCanvas);
+    const dst = new cv.Mat();
   
-      // Extract unique colors
-      const colorSet = new Set<string>();
+    cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY);
+    cv.Canny(src, dst, 50, 150);
   
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        const a = data[i + 3];
+    // Create a white background for the edge-detected image
+    const whiteBackground = new cv.Mat.zeros(dst.rows, dst.cols, cv.CV_8UC3);
+    whiteBackground.setTo(new cv.Scalar(255, 255, 255));
   
-        // Ignore fully transparent pixels
-        if (a > 0) {
-          const color = `rgb(${r}, ${g}, ${b})`;
-          colorSet.add(color);
+    for (let i = 0; i < dst.rows; i++) {
+      for (let j = 0; j < dst.cols; j++) {
+        if (dst.ucharPtr(i, j)[0] !== 0) {
+          whiteBackground.ucharPtr(i, j)[0] = 0;
+          whiteBackground.ucharPtr(i, j)[1] = 0;
+          whiteBackground.ucharPtr(i, j)[2] = 0;
         }
       }
-  
-      const uniqueColors = Array.from(colorSet);
-  
-      // Pass unique colors to the parent component
-      onSegmentsUpdated?.(uniqueColors);
-  
-      // Edge detection logic (as before)
-      const src = cv.imread(tempCanvas);
-      const dst = new cv.Mat();
-  
-      cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY);
-      cv.Canny(src, dst, 50, 150);
-  
-      const whiteBackground = new cv.Mat.zeros(dst.rows, dst.cols, cv.CV_8UC3);
-      whiteBackground.setTo(new cv.Scalar(255, 255, 255));
-  
-      for (let i = 0; i < dst.rows; i++) {
-        for (let j = 0; j < dst.cols; j++) {
-          if (dst.ucharPtr(i, j)[0] !== 0) {
-            whiteBackground.ucharPtr(i, j)[0] = 0;
-            whiteBackground.ucharPtr(i, j)[1] = 0;
-            whiteBackground.ucharPtr(i, j)[2] = 0;
-          }
-        }
-      }
-  
-      cv.imshow(tempCanvas, whiteBackground);
-  
-      const resultImage = new fabric.Image(tempCanvas);
-      canvas.clear();
-      canvas.add(resultImage);
-      canvas.renderAll();
-  
-      // Cleanup
-      src.delete();
-      dst.delete();
-      whiteBackground.delete();
     }
+  
+    // Draw the final edge-detected image onto the temporary canvas
+    cv.imshow(tempCanvas, whiteBackground);
+  
+    // Convert the temporary canvas to a Data URL
+    const segmentedImageUrl = tempCanvas.toDataURL("image/png");
+  
+    // Pass the segmented image Data URL to the parent component
+    if (onSegmentsUpdated) {
+      onSegmentsUpdated(segmentedImageUrl);
+    }
+  
+    // Replace the original image on the fabric canvas with the segmented image
+    const resultImage = new fabric.Image(tempCanvas);
+    canvas.clear();
+    canvas.add(resultImage);
+    canvas.renderAll();
+  
+    // Cleanup
+    src.delete();
+    dst.delete();
+    whiteBackground.delete();
   };  
+   
   
   return (
     <div className="image-canvas-container">

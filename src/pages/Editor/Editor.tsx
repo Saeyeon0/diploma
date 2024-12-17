@@ -15,6 +15,7 @@ const Editor: React.FC = () => {
   const [historyIndex, setHistoryIndex] = useState<number>(-1); // To track the current position in the history
   const [colors, setColors] = useState<any[]>([]); // Colors fetched from the server
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [segmentedImage, setSegmentedImage] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchColors = async () => {
@@ -92,25 +93,28 @@ const Editor: React.FC = () => {
   };
 
   const handleExportPDF = () => {
-    if (!uploadedImage) return;
-
+    const exportImage = segmentedImage || uploadedImage;
+  
+    if (!exportImage) return;
+  
     const doc = new jsPDF({
       orientation: "landscape",
       unit: "px",
       format: [imageSize.width, imageSize.height],
     });
-
+  
     doc.addImage(
-      uploadedImage,
-      "JPEG", // Use the appropriate format
+      exportImage,
+      "PNG", // Use "PNG" for segmented image (as it is a Data URL of a PNG)
       0,
       0,
       imageSize.width,
       imageSize.height
     );
-
+  
     doc.save("exported-image.pdf");
   };
+  
 
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -174,14 +178,15 @@ const Editor: React.FC = () => {
       <div className="canvas-container">
         {uploadedImage ? (
           <ImageCanvas
-            uploadedImage={uploadedImage}
-            // width={imageSize.width}
-            // height={imageSize.height}
-            onSegmentsUpdated={(segments) =>
-              console.log("Segments:", segments)
-            }
-            onDeleteImage={handleDeleteImage}
-          />
+          uploadedImage={uploadedImage}
+          onSegmentsUpdated={(segmentedImageUrl) => {
+            console.log("Segmented Image Data URL:", segmentedImageUrl);
+            setUploadedImage(segmentedImageUrl); // Update the current image with the segmented image
+          }}
+          onDeleteImage={handleDeleteImage}
+        />
+        
+        
         ) : (
           <div className="plus-sign">
             <p onClick={handlePlusClick} style={{ cursor: "pointer" }}>
