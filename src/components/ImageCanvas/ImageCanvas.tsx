@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import { fabric } from "fabric";
-import "./ImageCanvas.css"; // Import the CSS file for styles
+import "./ImageCanvas.css";
 
 interface ImageCanvasProps {
   uploadedImage: string;

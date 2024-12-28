@@ -54,8 +54,30 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
     return Math.sqrt((rgb1[0] - rgb2[0]) ** 2 + (rgb1[1] - rgb2[1]) ** 2 + (rgb1[2] - rgb2[2]) ** 2);
   };
 
-  // Find the closest color from the database
+  // Check if a color is grayscale
+  const isGrayscale = (rgb: [number, number, number]): boolean => {
+    const [r, g, b] = rgb;
+    const threshold = 20; // Allowable deviation for grayscale tones
+    return Math.abs(r - g) < threshold && Math.abs(g - b) < threshold && Math.abs(b - r) < threshold;
+  };
+
+  // Check if a color is sufficiently saturated
+  const isSaturated = (rgb: [number, number, number]): boolean => {
+    const [r, g, b] = rgb;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    return max - min > 30; // Saturation threshold
+  };
+
+  // Find the closest color from the database, with grayscale filtering
   const findClosestColor = (extractedColor: [number, number, number], dbColors: Color[]) => {
+    if (isGrayscale(extractedColor)) {
+      // If grayscale, map to either black or white based on intensity
+      const intensity = extractedColor[0]; // R == G == B in grayscale
+      if (intensity < 128) return dbColors.find(color => color.hex === "#000000")!; // Black
+      return dbColors.find(color => color.hex === "#FFFFFF")!; // White
+    }
+
     let closestColor = dbColors[0];
     let minDistance = Infinity;
 
@@ -98,19 +120,21 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
         const usedColorIds = new Set<string>();
         let colorCounter = 1;
 
-        extractedColors.forEach((extractedColor, index) => {
-          const closestColor = findClosestColor(extractedColor, colors);
-          if (!usedColorIds.has(closestColor._id)) {
-            matchedColors.push({ ...closestColor, number: colorCounter });
-            usedColorIds.add(closestColor._id);
+        extractedColors
+          .filter(color => isSaturated(color) || isGrayscale(color)) // Only keep valid colors
+          .forEach((extractedColor, index) => {
+            const closestColor = findClosestColor(extractedColor, colors);
+            if (!usedColorIds.has(closestColor._id)) {
+              matchedColors.push({ ...closestColor, number: colorCounter });
+              usedColorIds.add(closestColor._id);
 
-            // Overlay the number on the canvas at random positions
-            ctx.fillStyle = "#000";
-            ctx.font = "20px Arial";
-            ctx.fillText(`${colorCounter}`, 20 + index * 30, 40 + index * 30);
-            colorCounter++;
-          }
-        });
+              // Overlay the number on the canvas at random positions
+              ctx.fillStyle = "#000";
+              ctx.font = "20px Arial";
+              ctx.fillText(`${colorCounter}`, 20 + index * 30, 40 + index * 30);
+              colorCounter++;
+            }
+          });
 
         setHighlightedColors(matchedColors);
         setIsVisible(true); // Show the panel after colors are highlighted
