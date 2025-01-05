@@ -17,7 +17,7 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({ uploadedImage, onSegmentsUpda
       fabricCanvas.current = new fabric.Canvas(fabricCanvasRef.current, {
         width: 700,
         height: 700,
-        backgroundColor: "#ffffff",  // White background
+        backgroundColor: "#ffffff", // White background
         preserveObjectStacking: true,
       });
 
@@ -64,12 +64,10 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({ uploadedImage, onSegmentsUpda
     // Set non-edge pixels to white and edge pixels to black
     for (let i = 0; i < edgeData.length; i += 4) {
       if (edgeData[i] === 255) {
-        // Set edge pixels to black
         edgeData[i] = 0;     // Red
         edgeData[i + 1] = 0; // Green
         edgeData[i + 2] = 0; // Blue
       } else {
-        // Set non-edge pixels to white
         edgeData[i] = 255;     // Red
         edgeData[i + 1] = 255; // Green
         edgeData[i + 2] = 255; // Blue
@@ -122,7 +120,7 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({ uploadedImage, onSegmentsUpda
 
         const magnitude = Math.sqrt(gx * gx + gy * gy);
         const i = (y * width + x) * 4;
-        const edgeValue = magnitude > 100 ? 255 : 0; // Threshold for edge detection
+        const edgeValue = magnitude > 200 ? 255 : 0;
 
         edgeData[i] = edgeData[i + 1] = edgeData[i + 2] = edgeValue;
         edgeData[i + 3] = 255; // Full opacity
