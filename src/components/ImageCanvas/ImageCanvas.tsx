@@ -4,132 +4,134 @@ import "./ImageCanvas.css";
 
 interface ImageCanvasProps {
   uploadedImage: string;
-  onSegmentsUpdated?: (segmentedImageUrl: string) => void; // Accepts a string
+  onSegmentsUpdated?: (segmentedImageUrl: string) => void;
   onDeleteImage: () => void;
 }
 
-const ImageCanvas: React.FC<ImageCanvasProps> = ({
-  uploadedImage,
-  onSegmentsUpdated,
-  onDeleteImage,
-}) => {
+const ImageCanvas: React.FC<ImageCanvasProps> = ({ uploadedImage, onSegmentsUpdated, onDeleteImage }) => {
   const fabricCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const fabricInstanceRef = useRef<fabric.Canvas | null>(null); // Create a reference for the Fabric.js canvas
+  const fabricCanvas = useRef<fabric.Canvas | null>(null);
 
-  // Initialize the Fabric.js canvas
   useEffect(() => {
     if (fabricCanvasRef.current) {
-        const fabricCanvas = new fabric.Canvas(fabricCanvasRef.current, {
-          width: 700,
-          height: 700,
-          backgroundColor: "#f0f0f0",
-          preserveObjectStacking: true,
-        });
+      fabricCanvas.current = new fabric.Canvas(fabricCanvasRef.current, {
+        width: 700,
+        height: 700,
+        backgroundColor: "#ffffff",  // White background
+        preserveObjectStacking: true,
+      });
 
-      fabricInstanceRef.current = fabricCanvas; // Assign Fabric canvas to the ref
+      fabric.Image.fromURL(uploadedImage, (img) => {
+        img.scaleToWidth(550);
+        img.scaleToHeight(550);
+        fabricCanvas.current?.add(img);
+        fabricCanvas.current?.renderAll();
+      });
 
-      // Cleanup function to dispose the canvas
       return () => {
-        fabricCanvas.dispose();
+        fabricCanvas.current?.dispose();
       };
     }
-  }, []);
-  
-  // Upload and render image on Fabric.js canvas
-  useEffect(() => {
-    if (uploadedImage && fabricInstanceRef.current) {
-        fabric.Image.fromURL(uploadedImage, (img) => {
-          img.scaleToWidth(550);
-          img.scaleToHeight(550);
-  
-          fabricInstanceRef.current?.clear();
-          fabricInstanceRef.current?.add(img);
-          fabricInstanceRef.current?.renderAll();
-        });
-      }
-    }, [uploadedImage]);
+  }, [uploadedImage]);
 
-  useEffect(() => {
-    const checkOpenCV = () => {
-      if (cv && cv.getBuildInformation) {
-        console.log("OpenCV loaded successfully!");
-      } else {
-        setTimeout(checkOpenCV, 100);
-      }
-    };
-  
-    checkOpenCV();
-  }, []);
+  const outlineImage = () => {
+    if (!fabricCanvas.current) return;
 
-  // Example function for detecting and segmenting shapes (mock logic)
-  const segmentImage = () => {
-    if (!fabricInstanceRef.current) return;
-  
-    const canvas = fabricInstanceRef.current;
-  
-    // Get the first image object on the canvas
-    const imageObj = canvas.getObjects("image")[0] as fabric.Image;
+    const imageObj = fabricCanvas.current.getObjects("image")[0] as fabric.Image;
     if (!imageObj) return;
-  
-    // Get the image element and context
-    const imgElement = imageObj.getElement();
+
     const tempCanvas = document.createElement("canvas");
     const tempCtx = tempCanvas.getContext("2d");
-    if (!tempCtx || !imgElement) return;
-  
-    // Set canvas size
+    if (!tempCtx) return;
+
     tempCanvas.width = imageObj.width!;
     tempCanvas.height = imageObj.height!;
-  
-    // Draw the original image onto the temporary canvas
-    tempCtx.drawImage(imgElement, 0, 0);
-  
-    // --- Perform Edge Detection ---
-  
-    const src = cv.imread(tempCanvas);
-    const dst = new cv.Mat();
-  
-    cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY);
-    cv.Canny(src, dst, 50, 150);
-  
-    // Create a white background for the edge-detected image
-    const whiteBackground = new cv.Mat.zeros(dst.rows, dst.cols, cv.CV_8UC3);
-    whiteBackground.setTo(new cv.Scalar(255, 255, 255));
-  
-    for (let i = 0; i < dst.rows; i++) {
-      for (let j = 0; j < dst.cols; j++) {
-        if (dst.ucharPtr(i, j)[0] !== 0) {
-          whiteBackground.ucharPtr(i, j)[0] = 0;
-          whiteBackground.ucharPtr(i, j)[1] = 0;
-          whiteBackground.ucharPtr(i, j)[2] = 0;
-        }
+    const imgElement = imageObj.getElement();
+    tempCtx.drawImage(imgElement, 0, 0, tempCanvas.width, tempCanvas.height);
+
+    const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    const data = imageData.data;
+
+    // Convert to grayscale
+    for (let i = 0; i < data.length; i += 4) {
+      const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+      data[i] = data[i + 1] = data[i + 2] = avg;
+    }
+
+    // Apply edge detection using the Canny algorithm
+    const edgeData = cannyEdgeDetection(data, tempCanvas.width, tempCanvas.height);
+
+    // Set non-edge pixels to white and edge pixels to black
+    for (let i = 0; i < edgeData.length; i += 4) {
+      if (edgeData[i] === 255) {
+        // Set edge pixels to black
+        edgeData[i] = 0;     // Red
+        edgeData[i + 1] = 0; // Green
+        edgeData[i + 2] = 0; // Blue
+      } else {
+        // Set non-edge pixels to white
+        edgeData[i] = 255;     // Red
+        edgeData[i + 1] = 255; // Green
+        edgeData[i + 2] = 255; // Blue
+        edgeData[i + 3] = 255; // Full opacity (white background)
       }
     }
-  
-    // Draw the final edge-detected image onto the temporary canvas
-    cv.imshow(tempCanvas, whiteBackground);
-  
-    // Convert the temporary canvas to a Data URL
-    const segmentedImageUrl = tempCanvas.toDataURL("image/png");
-  
-    // Pass the segmented image Data URL to the parent component
+
+    // Put the processed edge data back to the canvas
+    const finalImageData = new ImageData(edgeData, tempCanvas.width, tempCanvas.height);
+    tempCtx.putImageData(finalImageData, 0, 0);
+
+    const outlinedImage = new fabric.Image(tempCanvas);
+    fabricCanvas.current?.clear();
+    fabricCanvas.current?.add(outlinedImage);
+    fabricCanvas.current?.renderAll();
+
     if (onSegmentsUpdated) {
+      const segmentedImageUrl = tempCanvas.toDataURL("image/png");
       onSegmentsUpdated(segmentedImageUrl);
     }
-  
-    // Replace the original image on the fabric canvas with the segmented image
-    const resultImage = new fabric.Image(tempCanvas);
-    canvas.clear();
-    canvas.add(resultImage);
-    canvas.renderAll();
-  
-    // Cleanup
-    src.delete();
-    dst.delete();
-    whiteBackground.delete();
-  };  
-   
-  
+  };
+
+  // Canny edge detection implementation
+  const cannyEdgeDetection = (data: Uint8ClampedArray, width: number, height: number) => {
+    const edgeData = new Uint8ClampedArray(data.length);
+    const sobelX = [
+      [-1, 0, 1],
+      [-2, 0, 2],
+      [-1, 0, 1],
+    ];
+    const sobelY = [
+      [1, 2, 1],
+      [0, 0, 0],
+      [-1, -2, -1],
+    ];
+
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        let gx = 0, gy = 0;
+
+        for (let ky = -1; ky <= 1; ky++) {
+          for (let kx = -1; kx <= 1; kx++) {
+            const i = ((y + ky) * width + (x + kx)) * 4;
+            const grayValue = (data[i] + data[i + 1] + data[i + 2]) / 3;
+
+            gx += grayValue * sobelX[ky + 1][kx + 1];
+            gy += grayValue * sobelY[ky + 1][kx + 1];
+          }
+        }
+
+        const magnitude = Math.sqrt(gx * gx + gy * gy);
+        const i = (y * width + x) * 4;
+        const edgeValue = magnitude > 100 ? 255 : 0; // Threshold for edge detection
+
+        edgeData[i] = edgeData[i + 1] = edgeData[i + 2] = edgeValue;
+        edgeData[i + 3] = 255; // Full opacity
+      }
+    }
+
+    return edgeData;
+  };
+
   return (
     <div className="image-canvas-container">
       {uploadedImage && (
@@ -137,10 +139,9 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
           &times;
         </div>
       )}
-
       <canvas ref={fabricCanvasRef} />
-      <button className="segment-button" onClick={segmentImage}>
-        Segment Image
+      <button className="segment-button" onClick={outlineImage}>
+        Outline Image
       </button>
     </div>
   );
