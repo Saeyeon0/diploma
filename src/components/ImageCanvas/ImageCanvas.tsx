@@ -17,13 +17,20 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({ uploadedImage, onSegmentsUpda
       fabricCanvas.current = new fabric.Canvas(fabricCanvasRef.current, {
         width: 700,
         height: 700,
-        backgroundColor: "#ffffff", // White background
+        backgroundColor: "#ffffff",
         preserveObjectStacking: true,
       });
 
       fabric.Image.fromURL(uploadedImage, (img) => {
         img.scaleToWidth(550);
         img.scaleToHeight(550);
+
+        // Center the image
+        img.set({
+          left: (fabricCanvas.current!.width! - img.getScaledWidth()) / 2,
+          top: (fabricCanvas.current!.height! - img.getScaledHeight()) / 2,
+        });
+
         fabricCanvas.current?.add(img);
         fabricCanvas.current?.renderAll();
       });
@@ -120,7 +127,7 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({ uploadedImage, onSegmentsUpda
 
         const magnitude = Math.sqrt(gx * gx + gy * gy);
         const i = (y * width + x) * 4;
-        const edgeValue = magnitude > 200 ? 255 : 0;
+        const edgeValue = magnitude > 180 ? 255 : 0;
 
         edgeData[i] = edgeData[i + 1] = edgeData[i + 2] = edgeValue;
         edgeData[i + 3] = 255; // Full opacity
