@@ -16,6 +16,7 @@ const Editor: React.FC = () => {
   const [colors, setColors] = useState<any[]>([]); // Colors fetched from the server
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [segmentedImage, setSegmentedImage] = useState<string | null>(null);
+  const fabricCanvasRef = useRef<HTMLCanvasElement | null>(null); // Ref for fabric canvas
 
   useEffect(() => {
     const fetchColors = async () => {
@@ -46,7 +47,6 @@ const Editor: React.FC = () => {
     window.addEventListener("resize", updateCanvasSize);
     return () => window.removeEventListener("resize", updateCanvasSize);
   }, []);
-  
   
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
@@ -93,28 +93,25 @@ const Editor: React.FC = () => {
   };
 
   const handleExportPDF = () => {
-    const exportImage = segmentedImage || uploadedImage;
-  
-    if (!exportImage) return;
-  
+    const canvasElement = fabricCanvasRef.current;
+
+    if (!canvasElement) return;
+
+    // Get the data URL of the canvas (this captures the exact content, including segmentation)
+    const canvasDataUrl = canvasElement.toDataURL("image/png");
+
     const doc = new jsPDF({
-      orientation: "landscape",
+      orientation: "portrait",
       unit: "px",
-      format: [imageSize.width, imageSize.height],
+      format: [canvasElement.width, canvasElement.height],
     });
-  
-    doc.addImage(
-      exportImage,
-      "PNG", // Use "PNG" for segmented image (as it is a Data URL of a PNG)
-      0,
-      0,
-      imageSize.width,
-      imageSize.height
-    );
-  
+
+    // Add the canvas image directly to the PDF
+    doc.addImage(canvasDataUrl, "PNG", 0, 0, canvasElement.width, canvasElement.height);
+
+    // Save the PDF
     doc.save("exported-image.pdf");
   };
-  
 
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -178,15 +175,14 @@ const Editor: React.FC = () => {
       <div className="canvas-container">
         {uploadedImage ? (
           <ImageCanvas
-          uploadedImage={uploadedImage}
-          onSegmentsUpdated={(segmentedImageUrl) => {
-            console.log("Segmented Image Data URL:", segmentedImageUrl);
-            setUploadedImage(segmentedImageUrl); // Update the current image with the segmented image
-          }}
-          onDeleteImage={handleDeleteImage}
-        />
-        
-        
+            uploadedImage={uploadedImage}
+            ref={fabricCanvasRef}
+            onSegmentsUpdated={(segmentedImageUrl) => {
+              console.log("Segmented Image Data URL:", segmentedImageUrl);
+              setUploadedImage(segmentedImageUrl); // Update the current image with the segmented image
+            }}
+            onDeleteImage={handleDeleteImage}
+          />
         ) : (
           <div className="plus-sign">
             <p onClick={handlePlusClick} style={{ cursor: "pointer" }}>
@@ -194,9 +190,7 @@ const Editor: React.FC = () => {
             </p>
           </div>
         )}
-        {/* <input type="file" accept="image/*" onChange={handleImageUpload} />
-      {uploadedImage && <img src={uploadedImage} alt="Uploaded" className="preview-image" />} */}
-      <ColorsList uploadedImage={uploadedImage} />
+        <ColorsList uploadedImage={uploadedImage} />
       </div>
 
       {/* Toolbar */}
