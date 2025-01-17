@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./Search.css"; // Import the CSS file
+import "./Search.css";
 
 interface SearchProps {
   onSearch: (term: string) => void;

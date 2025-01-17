@@ -33,6 +33,7 @@
 .image-canvas {
   max-width: 100%;
   margin: 5px 0 5px 0;
+  display: none;
 }
 
 .error-message {
@@ -55,6 +56,7 @@
   font-size: 9px;
   box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  margin-top: 0.2rem;
 }
 
 .color-item:hover {
@@ -77,7 +79,7 @@
   padding: 1rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   z-index: 5;
-  width: 155px;
+  width: 200px;
   margin: 0.1rem;
 }
 
@@ -140,13 +142,13 @@ select {
 
 @media (max-width: 768px) {
   .color-item {
-    width: 25px;
-    height: 25px;
+    width: 30px;
+    height: 30px;
     font-size: 5px;
   }
 
   .colors-panel {
-    width: 70px;
+    width: 140px;
     padding: 0.1rem;
     font-size: 0.3rem;
   }
@@ -164,6 +166,16 @@ select {
   .color-item {
     width: 20px;
     height: 20px;
-    font-size: 4px;
+    font-size: 3px;
+  }
+
+  .colors-panel {
+    width: 120px;
+    padding: 0;
+    font-size: 0.1rem;
+  }
+
+  .colors-panel h3 {
+    font-size: 0.6rem;
   }
 }

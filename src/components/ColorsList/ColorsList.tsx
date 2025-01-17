@@ -32,7 +32,9 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
         return response.json();
       })
       .then((data) => {
-        const sortedColors = data.sort((a: Color, b: Color) => a.order - b.order);
+        const sortedColors = data.sort(
+          (a: Color, b: Color) => a.order - b.order
+        );
         setColors(sortedColors);
         setLoading(false);
       })
@@ -50,15 +52,26 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   };
 
   // Calculate color distance
-  const colorDistance = (rgb1: [number, number, number], rgb2: [number, number, number]) => {
-    return Math.sqrt((rgb1[0] - rgb2[0]) ** 2 + (rgb1[1] - rgb2[1]) ** 2 + (rgb1[2] - rgb2[2]) ** 2);
+  const colorDistance = (
+    rgb1: [number, number, number],
+    rgb2: [number, number, number]
+  ) => {
+    return Math.sqrt(
+      (rgb1[0] - rgb2[0]) ** 2 +
+        (rgb1[1] - rgb2[1]) ** 2 +
+        (rgb1[2] - rgb2[2]) ** 2
+    );
   };
 
   // Check if a color is grayscale
   const isGrayscale = (rgb: [number, number, number]): boolean => {
     const [r, g, b] = rgb;
     const threshold = 20; // Allowable deviation for grayscale tones
-    return Math.abs(r - g) < threshold && Math.abs(g - b) < threshold && Math.abs(b - r) < threshold;
+    return (
+      Math.abs(r - g) < threshold &&
+      Math.abs(g - b) < threshold &&
+      Math.abs(b - r) < threshold
+    );
   };
 
   // Check if a color is sufficiently saturated
@@ -70,12 +83,16 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   };
 
   // Find the closest color from the database, with grayscale filtering
-  const findClosestColor = (extractedColor: [number, number, number], dbColors: Color[]) => {
+  const findClosestColor = (
+    extractedColor: [number, number, number],
+    dbColors: Color[]
+  ) => {
     if (isGrayscale(extractedColor)) {
       // If grayscale, map to either black or white based on intensity
       const intensity = extractedColor[0]; // R == G == B in grayscale
-      if (intensity < 128) return dbColors.find(color => color.hex === "#000000")!; // Black
-      return dbColors.find(color => color.hex === "#FFFFFF")!; // White
+      if (intensity < 128)
+        return dbColors.find((color) => color.hex === "#000000")!; // Black
+      return dbColors.find((color) => color.hex === "#FFFFFF")!; // White
     }
 
     let closestColor = dbColors[0];
@@ -113,7 +130,11 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
         ctx.drawImage(img, 0, 0, img.width, img.height);
 
         const colorThief = new ColorThief();
-        const extractedColors = colorThief.getPalette(img, 24) as [number, number, number][]; // Get up to 24 colors
+        const extractedColors = colorThief.getPalette(img, 24) as [
+          number,
+          number,
+          number
+        ][]; // Get up to 24 colors
 
         // Map extracted colors to the closest colors from the database
         const matchedColors: Color[] = [];
@@ -121,7 +142,7 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
         let colorCounter = 1;
 
         extractedColors
-          .filter(color => isSaturated(color) || isGrayscale(color)) // Only keep valid colors
+          .filter((color) => isSaturated(color) || isGrayscale(color)) // Only keep valid colors
           .forEach((extractedColor, index) => {
             const closestColor = findClosestColor(extractedColor, colors);
             if (!usedColorIds.has(closestColor._id)) {
@@ -149,6 +170,10 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   // Toggle visibility of the colors list
   const toggleVisibility = () => {
     setIsVisible(!isVisible);
+    if (isVisible) {
+      // Clear the highlighted colors when hiding the panel
+      setHighlightedColors([]);
+    }
   };
 
   if (loading) {
@@ -166,23 +191,34 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
         {isVisible ? "✕" : "↓"}
       </button>
 
-      <canvas ref={canvasRef} className="image-canvas"></canvas>
+      <canvas
+        ref={canvasRef}
+        className="image-canvas"
+        style={{ display: uploadedImage ? "block" : "none" }}
+      ></canvas>
 
       {isVisible && (
         <div className="colors-list">
-          {highlightedColors.length > 0 ? (
-            highlightedColors.map((color, index) => (
-              <div key={index} className="color-item" style={{ backgroundColor: color.hex }}>
-                <span className="color-number">{color.number}</span> {color.name}
-              </div>
-            ))
-          ) : (
-            colors.map((color, index) => (
-              <div key={index} className="color-item" style={{ backgroundColor: color.hex }}>
-                {color.name}
-              </div>
-            ))
-          )}
+          {highlightedColors.length > 0
+            ? highlightedColors.map((color, index) => (
+                <div
+                  key={index}
+                  className="color-item"
+                  style={{ backgroundColor: color.hex }}
+                >
+                  <span className="color-number">{color.number}</span>{" "}
+                  {color.name}
+                </div>
+              ))
+            : colors.map((color, index) => (
+                <div
+                  key={index}
+                  className="color-item"
+                  style={{ backgroundColor: color.hex }}
+                >
+                  {color.name}
+                </div>
+              ))}
         </div>
       )}
     </div>

@@ -1,4 +1,3 @@
-// TextBox.tsx
 import React, { useState } from "react";
 import Draggable from "react-draggable";
 import { ResizableBox } from "react-resizable";
