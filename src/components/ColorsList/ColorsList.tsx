@@ -7,7 +7,7 @@ interface Color {
   name: string;
   hex: string;
   order: number;
-  number?: number; // Optional number field for assigned numbers
+  number?: number;
 }
 
 interface ColorsListProps {
@@ -19,6 +19,7 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [highlightedColors, setHighlightedColors] = useState<Color[]>([]);
+  const [suggestedColors, setSuggestedColors] = useState<string[]>([]); // Store suggested colors
   const [isVisible, setIsVisible] = useState<boolean>(false); // Initially hidden
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -74,12 +75,15 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
     );
   };
 
-  // Check if a color is sufficiently saturated
-  const isSaturated = (rgb: [number, number, number]): boolean => {
+  // Check if a color is sufficiently saturated and bright
+  const isSaturatedAndBright = (rgb: [number, number, number]): boolean => {
     const [r, g, b] = rgb;
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
-    return max - min > 30; // Saturation threshold
+    const saturation = max - min;
+    const brightness = max;
+
+    return saturation > 30 && brightness > 50; // Adjust these thresholds as needed
   };
 
   // Find the closest color from the database, with grayscale filtering
@@ -124,7 +128,6 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        // Draw the image on the canvas
         canvas.width = img.width;
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0, img.width, img.height);
@@ -134,31 +137,47 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
           number,
           number,
           number
-        ][]; // Get up to 24 colors
+        ][];
 
-        // Map extracted colors to the closest colors from the database
         const matchedColors: Color[] = [];
         const usedColorIds = new Set<string>();
         let colorCounter = 1;
+        const newSuggestedColors: string[] = []; // Temporary array for suggestions
 
         extractedColors
-          .filter((color) => isSaturated(color) || isGrayscale(color)) // Only keep valid colors
+          .filter(
+            (color) =>
+              isSaturatedAndBright(color) || isGrayscale(color)
+          )
           .forEach((extractedColor, index) => {
             const closestColor = findClosestColor(extractedColor, colors);
             if (!usedColorIds.has(closestColor._id)) {
               matchedColors.push({ ...closestColor, number: colorCounter });
               usedColorIds.add(closestColor._id);
 
-              // Overlay the number on the canvas at random positions
               ctx.fillStyle = "#000";
               ctx.font = "20px Arial";
               ctx.fillText(`${colorCounter}`, 20 + index * 30, 40 + index * 30);
               colorCounter++;
+            } else {
+              // Suggest a new color if no match found
+              const hex = `#${(
+                (1 << 24) +
+                (extractedColor[0] << 16) +
+                (extractedColor[1] << 8) +
+                extractedColor[2]
+              )
+                .toString(16)
+                .slice(1)}`;
+              if (!newSuggestedColors.includes(hex)) {
+                newSuggestedColors.push(hex);
+              }
             }
           });
 
         setHighlightedColors(matchedColors);
-        setIsVisible(true); // Show the panel after colors are highlighted
+        setSuggestedColors(newSuggestedColors); // Update state with new suggestions
+        setIsVisible(true);
       };
 
       img.onerror = () => {
@@ -219,6 +238,21 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
                   {color.name}
                 </div>
               ))}
+        </div>
+      )}
+
+      {suggestedColors.length > 0 && (
+        <div className="suggested-colors">
+          <h4>Suggested New Colors:</h4>
+          {suggestedColors.map((hex, index) => (
+            <div key={index} className="suggested-color">
+              <span
+                className="color-swatch"
+                style={{ backgroundColor: hex }}
+              ></span>
+              <span>{hex}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>

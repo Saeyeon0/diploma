@@ -109,7 +109,6 @@ const Editor: React.FC = () => {
     // Add the canvas image directly to the PDF
     doc.addImage(canvasDataUrl, "PNG", 0, 0, canvasElement.width, canvasElement.height);
 
-    // Save the PDF
     doc.save("exported-image.pdf");
   };
 
@@ -139,7 +138,6 @@ const Editor: React.FC = () => {
 
   return (
     <div className="editor-container">
-      {/* Sidebar */}
       <div className="hamburger-menu" onClick={toggleSidebar}>
         <FontAwesomeIcon icon={faBars} />
       </div>
@@ -164,14 +162,12 @@ const Editor: React.FC = () => {
 
         <div className="import-text">
           <p>Export</p>
-          {/* Button for Exporting PDF */}
           <button className="export-button" onClick={handleExportPDF}>
             Export PDF
           </button>
         </div>
       </div>
 
-      {/* Canvas Container */}
       <div className="canvas-container">
         {uploadedImage ? (
           <ImageCanvas
@@ -193,7 +189,6 @@ const Editor: React.FC = () => {
         <ColorsList uploadedImage={uploadedImage} />
       </div>
 
-      {/* Toolbar */}
       <Toolbar onUndo={handleUndo} onRedo={handleRedo} />
     </div>
   );
