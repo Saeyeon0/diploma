@@ -1,10 +1,5 @@
 [ 
 
-  {
-    "name": "Yellow",
-    "munsell_hue": "Y",
-    "hex": "#FFFF00",
-    "children": [
           {
              "name": "Cadmium Yellow Light",
              "company": "Liquitex",
@@ -395,14 +390,9 @@
              "rgb": "(208, 169, 73)",
              "htmlname": "",
              "children": []
-          }
-     ]
+          
   }, 
-  {
-    "name": "GreenYellow",
-    "munsell_hue": "GY",
-    "hex": "#80FF00",
-    "children": [
+
           {
              "name": "Chromium Oxide Green",
              "company": "Golden",
@@ -521,14 +511,8 @@
              "rgb": "(224, 238, 80)",
              "htmlname": "",
              "children": []
-          }
-    ]
+          
   }, 
-  {
-    "name": "Green",
-    "munsell_hue": "G",
-    "hex": "#00FF00",
-    "children": [
           {
              "name": "Cobalt Green",
              "company": "Golden",
@@ -596,15 +580,9 @@
              "rgb": "(0, 61, 42)",
              "htmlname": "",
              "children": []
-          }
-    ]
+          
   },
   
-  {
-    "name": "BlueGreen",
-    "munsell_hue": "BG",
-    "hex": "#00FFFF",
-    "children": [
           {
              "name": "Cobalt Green",
              "company": "Liquitex",
@@ -791,15 +769,8 @@
              "rgb": "(20, 36, 37)",
              "htmlname": "",
              "children": []
-          }
-    ]
+         
   },
-
-  {
-    "name": "Blue",
-    "munsell_hue": "B",
-    "hex": "#0000FF",
-    "children": [
           {
              "name": "N4 Neutral Gray",
              "company": "Golden",
@@ -816,15 +787,8 @@
              "rgb": "(82, 99, 108)",
              "htmlname": "",
              "children": []
-          }
-    ]
+         
   },
-  
-  {
-    "name": "PurpleBlue",
-    "munsell_hue": "PB",
-    "hex": "#8000FF",
-    "children": [
           {
              "name": "Anthraquinone Blue",
              "company": "Golden",
@@ -1164,15 +1128,8 @@
              "rgb": "(59, 43, 96)",
              "htmlname": "",
              "children": []
-          }
-    ]
+          
   },
-
-  {
-    "name": "Purple",
-    "munsell_hue": "P",
-    "hex": "#FF00FF",
-    "children": [
           {
              "name": "Dioxazine Purple",
              "company": "Golden",
@@ -1274,16 +1231,9 @@
              "rgb": "(78, 70, 87)",
              "htmlname": "",
              "children": []
-          }
-
-    ]
+          
   },
-  
-  {
-    "name": "RedPurple",
-    "munsell_hue": "RP",
-    "hex": "#FF0080",
-    "children": [
+
           {
              "name": "Light Magenta",
              "company": "Golden",
@@ -1419,15 +1369,8 @@
              "rgb": "(128, 39, 70)",
              "htmlname": "",
              "children": []
-          }
-    ]
+         
   },
-
-  {
-    "name": "Red",
-    "munsell_hue": "R",
-    "hex": "#FF0000",
-    "children": [
           {
              "name": "Cadmium Red Dark",
              "company": "Golden",
@@ -1954,15 +1897,9 @@
              "rgb": "(218, 73, 0)",
              "htmlname": "",
              "children": []
-          }
-    ]
+      
   },
-  
-  {
-    "name": "Orange",
-    "munsell_hue": "YR",
-    "hex": "#FF8000",
-    "children": [
+
           {
              "name": "Burnt Sienna",
              "company": "Golden",
@@ -2353,15 +2290,9 @@
              "rgb": "(244, 154, 0)",
              "htmlname": "",
              "children": []
-          }
-    ]
+          
   },
 
-  {
-    "name": "White",
-    "munsell_hue": "White",
-    "hex": "#FFFFFF",
-    "children": [
           {
              "name": "Titanium White",
              "company": "Golden",
@@ -2378,51 +2309,11 @@
              "rgb": "",
              "htmlname": "",
              "children": []
-          },
-          {
-             "name": "Titanium White 1",
-             "company": "Liquitex",
-             "media": "Acrylic",
-             "hue_bias": "White",
-             "value": "10",
-             "chroma": "1.1",
-             "temp": "",
-             "opacity": "o",
-             "pigment": "PW 6",
-             "paint_chip": "",
-             "pantone": "",
-             "hex": "#ffffff",
-             "rgb": "",
-             "htmlname": "",
-             "children": []
-          },
-          {
-             "name": "Zinc White",
-             "company": "Golden",
-             "media": "Acrylic",
-             "hue_bias": "White",
-             "value": "10",
-             "chroma": "1.5",
-             "temp": "",
-             "opacity": "",
-             "pigment": "",
-             "paint_chip": "",
-             "pantone": "",
-             "hex": "#ffffff",
-             "rgb": "",
-             "htmlname": "",
-             "children": []
-          }
-    ]
+          
   },
   
-  {
-    "name": "Black",
-    "munsell_hue": "Black",
-    "hex": "#8C8C8C",
-    "children": [
           {
-             "name": "Bone Black",
+             "name": "Black",
              "company": "Golden",
              "media": "Acrylic",
              "hue_bias": "Black",
@@ -2433,7 +2324,7 @@
              "pigment": "",
              "paint_chip": "",
              "pantone": "",
-             "hex": "",
+             "hex": "#000000",
              "rgb": "",
              "htmlname": "",
              "children": []
@@ -2450,7 +2341,7 @@
              "pigment": "",
              "paint_chip": "",
              "pantone": "",
-             "hex": "",
+             "hex": "#0c0a00",
              "rgb": "",
              "htmlname": "",
              "children": []
@@ -2467,12 +2358,11 @@
              "pigment": "",
              "paint_chip": "",
              "pantone": "",
-             "hex": "",
+             "hex": "#45494e",
              "rgb": "",
              "htmlname": "",
              "children": []
           }
-    ]
-  }
+    
 
 ] 

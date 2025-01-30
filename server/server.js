@@ -8,7 +8,7 @@ const port = 5001;
 
 app.use(cors());  // Enable CORS for all routes
 
-mongoose.connect('mongodb://localhost:27017/paintbynumbers')
+mongoose.connect('mongodb://localhost:27017/dbcolors')
   .then(() => {
     console.log('Connected to MongoDB');
   })

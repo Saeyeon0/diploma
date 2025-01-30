@@ -3,7 +3,9 @@
   flex-wrap: wrap;
   gap: 9px;
   padding: 10px;
-  /* margin-top: 0; */
+  max-height: 610px;  /* Adjust max-height as necessary */
+  overflow-y: auto;   /* Enable vertical scrolling */
+  margin-top: 10px;
 }
 
 .color-item {

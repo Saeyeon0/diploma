@@ -118,66 +118,83 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   useEffect(() => {
     if (uploadedImage && colors.length > 0) {
       const img = new Image();
-      img.crossOrigin = "Anonymous";
+      img.crossOrigin = "Anonymous";  // Ensure the image can be loaded from different origins
       img.src = uploadedImage;
 
       img.onload = () => {
+        console.log("Image loaded:", img.width, img.height); // Debugging output
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0, img.width, img.height);
+        // Scale down the image if it’s too large
+        const maxWidth = 800;
+        const maxHeight = 800;
+
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          const aspectRatio = width / height;
+          if (width > height) {
+            width = maxWidth;
+            height = width / aspectRatio;
+          } else {
+            height = maxHeight;
+            width = height * aspectRatio;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
 
         const colorThief = new ColorThief();
-        const extractedColors = colorThief.getPalette(img, 24) as [
-          number,
-          number,
-          number
-        ][];
+        try {
+          const extractedColors = colorThief.getPalette(img, 24);
+          console.log("Extracted colors:", extractedColors); // Debugging output
 
-        const matchedColors: Color[] = [];
-        const usedColorIds = new Set<string>();
-        let colorCounter = 1;
-        const newSuggestedColors: string[] = []; // Temporary array for suggestions
+          const matchedColors: Color[] = [];
+          const usedColorIds = new Set<string>();
+          let colorCounter = 1;
+          const newSuggestedColors: string[] = []; // Temporary array for suggestions
 
-        extractedColors
-          .filter(
-            (color) =>
-              isSaturatedAndBright(color) || isGrayscale(color)
-          )
-          .forEach((extractedColor, index) => {
-            const closestColor = findClosestColor(extractedColor, colors);
-            if (!usedColorIds.has(closestColor._id)) {
-              matchedColors.push({ ...closestColor, number: colorCounter });
-              usedColorIds.add(closestColor._id);
+          extractedColors
+            .filter((color) => isSaturatedAndBright(color) || isGrayscale(color))
+            .forEach((extractedColor, index) => {
+              const closestColor = findClosestColor(extractedColor, colors);
+              if (!usedColorIds.has(closestColor._id)) {
+                matchedColors.push({ ...closestColor, number: colorCounter });
+                usedColorIds.add(closestColor._id);
 
-              ctx.fillStyle = "#000";
-              ctx.font = "20px Arial";
-              ctx.fillText(`${colorCounter}`, 20 + index * 30, 40 + index * 30);
-              colorCounter++;
-            } else {
-              // Suggest a new color if no match found
-              const hex = `#${(
-                (1 << 24) +
-                (extractedColor[0] << 16) +
-                (extractedColor[1] << 8) +
-                extractedColor[2]
-              )
-                .toString(16)
-                .slice(1)}`;
-              if (!newSuggestedColors.includes(hex)) {
-                newSuggestedColors.push(hex);
+                ctx.fillStyle = "#000";
+                ctx.font = "20px Arial";
+                ctx.fillText(`${colorCounter}`, 20 + index * 30, 40 + index * 30);
+                colorCounter++;
+              } else {
+                // Suggest a new color if no match found
+                const hex = `#${(
+                  (1 << 24) +
+                  (extractedColor[0] << 16) +
+                  (extractedColor[1] << 8) +
+                  extractedColor[2]
+                )
+                  .toString(16)
+                  .slice(1)}`;
+                if (!newSuggestedColors.includes(hex)) {
+                  newSuggestedColors.push(hex);
+                }
               }
-            }
-          });
+            });
 
-        setHighlightedColors(matchedColors);
-        setSuggestedColors(newSuggestedColors); // Update state with new suggestions
-        setIsVisible(true);
+          setHighlightedColors(matchedColors);
+          setSuggestedColors(newSuggestedColors); // Update state with new suggestions
+          setIsVisible(true);
+        } catch (error) {
+          console.error("Error extracting colors:", error);
+        }
       };
 
       img.onerror = () => {
@@ -225,7 +242,7 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
                   className="color-item"
                   style={{ backgroundColor: color.hex }}
                 >
-                  <span className="color-number">{color.number}</span>{" "}
+                  <span className="color-number">{color.number}</span>
                   {color.name}
                 </div>
               ))
