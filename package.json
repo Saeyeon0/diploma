@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron": "NODE_ENV=development electron electron.js",
+    "electron:build": "tsc && vite build && electron-builder"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.1",
@@ -46,6 +48,8 @@
     "@types/react-dom": "^18.0.10",
     "@types/react-resizable": "^3.0.8",
     "@vitejs/plugin-react": "^3.1.0",
+    "electron": "^34.0.2",
+    "electron-builder": "^25.1.8",
     "typescript": "^4.9.5",
     "vite": "^4.1.0"
   }
