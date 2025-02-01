@@ -20,6 +20,7 @@
   border: 1px solid #ccc;
   outline: none;
   background-color: #e5e3e3;
+  font-family: 'Silkscreen', sans-serif;
 }
 
 .search-input:focus {

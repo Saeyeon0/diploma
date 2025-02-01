@@ -3,7 +3,7 @@
   flex-wrap: wrap;
   gap: 9px;
   padding: 10px;
-  max-height: 610px;  /* Adjust max-height as necessary */
+  max-height: 610px;
   overflow-y: auto;   /* Enable vertical scrolling */
   margin-top: 10px;
 }
@@ -39,7 +39,7 @@
 }
 
 .error-message {
-  color: red;
+  color: #282727;
 }
 
 .color-item {
@@ -69,6 +69,7 @@
 .error-message {
   color: red;
   font-weight: bold;
+  font-family: 'Silkscreen', sans-serif;
 }
 
 .colors-panel {
@@ -89,6 +90,7 @@
   color: #282727;
   font-size: 1.2rem;
   margin: 0.2rem;
+  font-family: 'Silkscreen', sans-serif;
 }
 
 select {
@@ -135,6 +137,7 @@ select {
   position: absolute;
   right: 1rem;
   top: 1.3rem;
+  font-family: 'Silkscreen', sans-serif;
 }
 
 .close-button:hover {

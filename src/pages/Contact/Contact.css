@@ -4,6 +4,7 @@ main {
     justify-content: center;
     align-items: center;
     min-height: 80vh;
+    font-family: 'Bungee', cursive;
   }
   
   h1 {

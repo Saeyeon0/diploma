@@ -6,6 +6,8 @@ interface ImageCanvasProps {
   uploadedImage: string;
   onSegmentsUpdated?: (segmentedImageUrl: string) => void;
   onDeleteImage: () => void;
+  showGrid?: boolean;  // Optional prop to toggle grid visibility
+  gridSpacing?: number;
 }
 
 const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
@@ -18,70 +20,103 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
     useEffect(() => {
       if (fabricCanvasRef.current) {
         fabricCanvas.current = new fabric.Canvas(fabricCanvasRef.current, {
-          width: 700,
-          height: 700,
+          width: 900,
+          height: 750,
           backgroundColor: "#ffffff",
           preserveObjectStacking: true,
         });
-    
+
         fabric.Image.fromURL(uploadedImage, (img) => {
           const originalSize = img.getOriginalSize();
           const aspectRatio = originalSize.width / originalSize.height;
           let newWidth, newHeight;
-    
+
           if (originalSize.width > originalSize.height) {
-            newWidth = 550;
-            newHeight = 550 / aspectRatio;
+            newWidth = 700;
+            newHeight = 700 / aspectRatio;
           } else {
-            newHeight = 550;
-            newWidth = 550 * aspectRatio;
+            newHeight = 700;
+            newWidth = 700 * aspectRatio;
           }
-    
+
           img.scaleToWidth(newWidth);
           img.scaleToHeight(newHeight);
-    
+
           img.set({
             left: (fabricCanvas.current!.width! - newWidth) / 2,
             top: (fabricCanvas.current!.height! - newHeight) / 2,
           });
-    
+
           fabricCanvas.current?.add(img);
           fabricCanvas.current?.renderAll();
+
+          drawGrid(); // Draw the grid after the image is added
         });
-    
+
         return () => {
           fabricCanvas.current?.dispose();
         };
       }
     }, [uploadedImage]);
-  
+
+    // Function to draw a grid over the canvas
+    const drawGrid = () => {
+      if (!fabricCanvas.current) return;
+
+      const gridSize = 50; // Grid size (adjustable)
+      const width = fabricCanvas.current.width!;
+      const height = fabricCanvas.current.height!;
+
+      // Horizontal lines
+      for (let y = 0; y < height; y += gridSize) {
+        const line = new fabric.Line([0, y, width, y], {
+          stroke: 'rgba(235, 235, 235, 0.5)',
+          strokeWidth: 1,
+          selectable: false,
+        });
+        fabricCanvas.current.add(line);
+      }
+
+      // Vertical lines
+      for (let x = 0; x < width; x += gridSize) {
+        const line = new fabric.Line([x, 0, x, height], {
+          stroke: 'rgba(235, 235, 235, 0.5)',
+          strokeWidth: 1,
+          selectable: false,
+        });
+        fabricCanvas.current.add(line);
+      }
+
+      fabricCanvas.current.renderAll(); // Rerender the canvas to display the grid
+    };
+
     const outlineImage = () => {
       if (!fabricCanvas.current) return;
-    
+
       const imageObj = fabricCanvas.current.getObjects("image")[0] as fabric.Image;
       if (!imageObj) return;
-    
+
       const tempCanvas = document.createElement("canvas");
       const tempCtx = tempCanvas.getContext("2d");
       if (!tempCtx) return;
-    
+
       tempCanvas.width = imageObj.width!;
       tempCanvas.height = imageObj.height!;
       const imgElement = imageObj.getElement();
       tempCtx.drawImage(imgElement, 0, 0, tempCanvas.width, tempCanvas.height);
-    
+
       const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
       const data = imageData.data;
-    
+
       // Convert to grayscale
       for (let i = 0; i < data.length; i += 4) {
         const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
         data[i] = data[i + 1] = data[i + 2] = avg;
       }
-    
+
       // Apply edge detection using the Canny algorithm
       const edgeData = cannyEdgeDetection(data, tempCanvas.width, tempCanvas.height);
-    
+
       // Set non-edge pixels to white and edge pixels to black
       for (let i = 0; i < edgeData.length; i += 4) {
         if (edgeData[i] === 255) {
@@ -95,11 +130,11 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
           edgeData[i + 3] = 255; // Full opacity (white background)
         }
       }
-    
+
       // Put the processed edge data back to the canvas
       const finalImageData = new ImageData(edgeData, tempCanvas.width, tempCanvas.height);
       tempCtx.putImageData(finalImageData, 0, 0);
-    
+
       // Create a Fabric Image object from the outlined canvas
       const outlinedImage = new fabric.Image(tempCanvas, {
         left: 0,
@@ -112,10 +147,10 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         lockScalingX: false,
         lockScalingY: false,
       });
-    
+
       // Set the background to white and clear the canvas
       fabricCanvas.current.setBackgroundColor("white", fabricCanvas.current.renderAll.bind(fabricCanvas.current));
-      
+
       // Get the original image object and center it on the canvas
       const canvasWidth = fabricCanvas.current.width!;
       const canvasHeight = fabricCanvas.current.height!;
@@ -129,19 +164,19 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         lockMovementX: false,
         lockMovementY: false,
       });
-    
+
       // Add both images (original and traced) to the canvas
       fabricCanvas.current?.clear(); // Clear any existing objects
       fabricCanvas.current?.add(imageObj); // Add the original image
       fabricCanvas.current?.add(outlinedImage); // Add the traced image
-    
+
       fabricCanvas.current?.renderAll();
-    
+
       if (onSegmentsUpdated) {
         const segmentedImageUrl = tempCanvas.toDataURL("image/png");
         onSegmentsUpdated(segmentedImageUrl);
       }
-    };    
+    };
 
     // Canny edge detection implementation
     const cannyEdgeDetection = (data: Uint8ClampedArray, width: number, height: number) => {

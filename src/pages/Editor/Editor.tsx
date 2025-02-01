@@ -11,12 +11,13 @@ const Editor: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState({ width: 600, height: 600 });
-  const [history, setHistory] = useState<any[]>([]); // History stack for undo/redo
-  const [historyIndex, setHistoryIndex] = useState<number>(-1); // To track the current position in the history
-  const [colors, setColors] = useState<any[]>([]); // Colors fetched from the server
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const [colors, setColors] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [segmentedImage, setSegmentedImage] = useState<string | null>(null);
-  const fabricCanvasRef = useRef<HTMLCanvasElement | null>(null); // Ref for fabric canvas
+  const fabricCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const dropAreaRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const fetchColors = async () => {
@@ -30,24 +31,42 @@ const Editor: React.FC = () => {
     };
 
     fetchColors();
-  }, []);
 
-  useEffect(() => {
-    const updateCanvasSize = () => {
-      if (window.innerWidth <= 480) {
-        setImageSize({ width: 150, height: 150 });
-      } else if (window.innerWidth <= 768) {
-        setImageSize({ width: 400, height: 400 });
-      } else {
-        setImageSize({ width: 550, height: 550 });
+    const handleDrop = (event: DragEvent) => {
+      event.preventDefault();
+      const file = event.dataTransfer?.files[0];
+      if (file) {
+        handleFile(file);
       }
     };
-  
-    updateCanvasSize();
-    window.addEventListener("resize", updateCanvasSize);
-    return () => window.removeEventListener("resize", updateCanvasSize);
+
+    const handleDragOver = (event: DragEvent) => {
+      event.preventDefault();
+    };
+
+    const dropArea = dropAreaRef.current;
+    if (dropArea) {
+      dropArea.addEventListener("drop", handleDrop);
+      dropArea.addEventListener("dragover", handleDragOver);
+    }
+
+    return () => {
+      if (dropArea) {
+        dropArea.removeEventListener("drop", handleDrop);
+        dropArea.removeEventListener("dragover", handleDragOver);
+      }
+    };
   }, []);
-  
+
+  const handleFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setUploadedImage(e.target?.result as string);
+      pushToHistory(e.target?.result as string, imageSize);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
   };
@@ -67,29 +86,17 @@ const Editor: React.FC = () => {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setUploadedImage(e.target?.result as string);
-        pushToHistory(e.target?.result as string, imageSize); // Save image to history
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const imageUrl = URL.createObjectURL(event.target.files[0]);
-      setUploadedImage(imageUrl);
+      handleFile(file);
     }
   };
 
   const handleDeleteImage = () => {
     setUploadedImage(null);
-    setImageSize({ width: 600, height: 600 }); // Reset size
+    setImageSize({ width: 600, height: 600 });
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    pushToHistory(null, { width: 600, height: 600 }); // Save deletion to history
+    pushToHistory(null, { width: 600, height: 600 });
   };
 
   const handleExportPDF = () => {
@@ -97,7 +104,6 @@ const Editor: React.FC = () => {
 
     if (!canvasElement) return;
 
-    // Get the data URL of the canvas (this captures the exact content, including segmentation)
     const canvasDataUrl = canvasElement.toDataURL("image/png");
 
     const doc = new jsPDF({
@@ -106,8 +112,14 @@ const Editor: React.FC = () => {
       format: [canvasElement.width, canvasElement.height],
     });
 
-    // Add the canvas image directly to the PDF
-    doc.addImage(canvasDataUrl, "PNG", 0, 0, canvasElement.width, canvasElement.height);
+    doc.addImage(
+      canvasDataUrl,
+      "PNG",
+      0,
+      0,
+      canvasElement.width,
+      canvasElement.height
+    );
 
     doc.save("exported-image.pdf");
   };
@@ -147,7 +159,7 @@ const Editor: React.FC = () => {
         </div>
         <button
           className="add-file-button"
-          onClick={() => fileInputRef.current?.click()} // Trigger the file input
+          onClick={() => fileInputRef.current?.click()}
         >
           Add File
         </button>
@@ -157,7 +169,7 @@ const Editor: React.FC = () => {
           ref={fileInputRef}
           accept="image/*"
           onChange={handleFileUpload}
-          style={{ display: "none" }} // Hide the input visually
+          style={{ display: "none" }}
         />
 
         <div className="import-text">
@@ -168,27 +180,30 @@ const Editor: React.FC = () => {
         </div>
       </div>
 
-      <div className="canvas-container">
-        {uploadedImage ? (
-          <ImageCanvas
-            uploadedImage={uploadedImage}
-            ref={fabricCanvasRef}
-            onSegmentsUpdated={(segmentedImageUrl) => {
-              console.log("Segmented Image Data URL:", segmentedImageUrl);
-              setUploadedImage(segmentedImageUrl); // Update the current image with the segmented image
-            }}
-            onDeleteImage={handleDeleteImage}
-          />
-        ) : (
-          <div className="plus-sign">
-            <p onClick={handlePlusClick} style={{ cursor: "pointer" }}>
-              +
-            </p>
-          </div>
-        )}
-        <ColorsList uploadedImage={uploadedImage} />
+      <div className="canvas-container" ref={dropAreaRef}>
+        <div className="canvas-area">
+          {uploadedImage ? (
+            <ImageCanvas
+              uploadedImage={uploadedImage}
+              ref={fabricCanvasRef}
+              onSegmentsUpdated={(segmentedImageUrl) => {
+                console.log("Segmented Image Data URL:", segmentedImageUrl);
+                setUploadedImage(segmentedImageUrl);
+              }}
+              onDeleteImage={handleDeleteImage}
+              showGrid={false} // Grid controls have been removed
+              gridSpacing={50} // This value can be used in the ImageCanvas component if needed
+            />
+          ) : (
+            <div className="plus-sign">
+              <p onClick={handlePlusClick} style={{ cursor: "pointer" }}>
+              ☆ Drag an image here or click to upload ☆
+              </p>
+            </div>
+          )}
+          <ColorsList uploadedImage={uploadedImage} />
+        </div>
       </div>
-
       <Toolbar onUndo={handleUndo} onRedo={handleRedo} />
     </div>
   );

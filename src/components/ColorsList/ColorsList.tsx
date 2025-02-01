@@ -19,7 +19,6 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [highlightedColors, setHighlightedColors] = useState<Color[]>([]);
-  const [suggestedColors, setSuggestedColors] = useState<string[]>([]); // Store suggested colors
   const [isVisible, setIsVisible] = useState<boolean>(false); // Initially hidden
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -89,7 +88,8 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   // Find the closest color from the database, with grayscale filtering
   const findClosestColor = (
     extractedColor: [number, number, number],
-    dbColors: Color[]
+    dbColors: Color[],
+    threshold: number = 50
   ) => {
     if (isGrayscale(extractedColor)) {
       // If grayscale, map to either black or white based on intensity
@@ -111,7 +111,8 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
       }
     });
 
-    return closestColor;
+    // Return null if no closest color is found
+    return closestColor || null;
   };
 
   // Extract and match colors using ColorThief
@@ -159,13 +160,19 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
           const matchedColors: Color[] = [];
           const usedColorIds = new Set<string>();
           let colorCounter = 1;
-          const newSuggestedColors: string[] = []; // Temporary array for suggestions
 
           extractedColors
             .filter((color) => isSaturatedAndBright(color) || isGrayscale(color))
             .forEach((extractedColor, index) => {
               const closestColor = findClosestColor(extractedColor, colors);
-              if (!usedColorIds.has(closestColor._id)) {
+
+              // Check if the color is too similar to any already added color
+              const isDuplicate = matchedColors.some(
+                (existingColor) =>
+                  colorDistance(extractedColor, hexToRgb(existingColor.hex)) < 40
+              );
+
+              if (closestColor && !isDuplicate) {
                 matchedColors.push({ ...closestColor, number: colorCounter });
                 usedColorIds.add(closestColor._id);
 
@@ -174,23 +181,12 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
                 ctx.fillText(`${colorCounter}`, 20 + index * 30, 40 + index * 30);
                 colorCounter++;
               } else {
-                // Suggest a new color if no match found
-                const hex = `#${(
-                  (1 << 24) +
-                  (extractedColor[0] << 16) +
-                  (extractedColor[1] << 8) +
-                  extractedColor[2]
-                )
-                  .toString(16)
-                  .slice(1)}`;
-                if (!newSuggestedColors.includes(hex)) {
-                  newSuggestedColors.push(hex);
-                }
+                // Handle case where no match is found or color is too similar
+                console.log("Color is too similar or no match found:", extractedColor);
               }
             });
 
           setHighlightedColors(matchedColors);
-          setSuggestedColors(newSuggestedColors); // Update state with new suggestions
           setIsVisible(true);
         } catch (error) {
           console.error("Error extracting colors:", error);
@@ -255,21 +251,6 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
                   {color.name}
                 </div>
               ))}
-        </div>
-      )}
-
-      {suggestedColors.length > 0 && (
-        <div className="suggested-colors">
-          <h4>Suggested New Colors:</h4>
-          {suggestedColors.map((hex, index) => (
-            <div key={index} className="suggested-color">
-              <span
-                className="color-swatch"
-                style={{ backgroundColor: hex }}
-              ></span>
-              <span>{hex}</span>
-            </div>
-          ))}
         </div>
       )}
     </div>
