@@ -121,22 +121,22 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
       const img = new Image();
       img.crossOrigin = "Anonymous";  // Ensure the image can be loaded from different origins
       img.src = uploadedImage;
-
+  
       img.onload = () => {
         console.log("Image loaded:", img.width, img.height); // Debugging output
         const canvas = canvasRef.current;
         if (!canvas) return;
-
+  
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
-
+  
         // Scale down the image if it’s too large
         const maxWidth = 800;
         const maxHeight = 800;
-
+  
         let width = img.width;
         let height = img.height;
-
+  
         if (width > maxWidth || height > maxHeight) {
           const aspectRatio = width / height;
           if (width > height) {
@@ -147,35 +147,36 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
             width = height * aspectRatio;
           }
         }
-
+  
         canvas.width = width;
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
-
+  
         const colorThief = new ColorThief();
         try {
           const extractedColors = colorThief.getPalette(img, 24);
           console.log("Extracted colors:", extractedColors); // Debugging output
-
+  
           const matchedColors: Color[] = [];
           const usedColorIds = new Set<string>();
           let colorCounter = 1;
-
+  
           extractedColors
             .filter((color) => isSaturatedAndBright(color) || isGrayscale(color))
             .forEach((extractedColor, index) => {
               const closestColor = findClosestColor(extractedColor, colors);
-
-              // Check if the color is too similar to any already added color
+  
+              // Check if the color is too similar to any already added color or is a duplicate
               const isDuplicate = matchedColors.some(
                 (existingColor) =>
+                  existingColor.hex === closestColor?.hex || // Check hex directly for duplicates
                   colorDistance(extractedColor, hexToRgb(existingColor.hex)) < 40
               );
-
+  
               if (closestColor && !isDuplicate) {
                 matchedColors.push({ ...closestColor, number: colorCounter });
                 usedColorIds.add(closestColor._id);
-
+  
                 ctx.fillStyle = "#000";
                 ctx.font = "20px Arial";
                 ctx.fillText(`${colorCounter}`, 20 + index * 30, 40 + index * 30);
@@ -185,20 +186,20 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
                 console.log("Color is too similar or no match found:", extractedColor);
               }
             });
-
+  
           setHighlightedColors(matchedColors);
           setIsVisible(true);
         } catch (error) {
           console.error("Error extracting colors:", error);
         }
       };
-
+  
       img.onerror = () => {
         console.error("Failed to load the image for color extraction.");
       };
     }
   }, [uploadedImage, colors]);
-
+  
   // Toggle visibility of the colors list
   const toggleVisibility = () => {
     setIsVisible(!isVisible);

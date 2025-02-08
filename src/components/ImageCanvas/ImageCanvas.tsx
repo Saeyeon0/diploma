@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, forwardRef, useImperativeHandle } from "react";
+import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState } from "react";
 import { fabric } from "fabric";
 import "./ImageCanvas.css";
 
@@ -14,6 +14,7 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
   ({ uploadedImage, onSegmentsUpdated, onDeleteImage }, ref) => {
     const fabricCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const fabricCanvas = useRef<fabric.Canvas | null>(null);
+    const [isGridVisible, setIsGridVisible] = useState(true); // State for grid visibility
 
     useImperativeHandle(ref, () => fabricCanvasRef.current as HTMLCanvasElement);
 
@@ -50,14 +51,16 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
           fabricCanvas.current?.add(img);
           fabricCanvas.current?.renderAll();
 
-          drawGrid(); // Draw the grid after the image is added
+          if (isGridVisible) {
+            drawGrid(); // Draw the grid if it's visible
+          }
         });
 
         return () => {
           fabricCanvas.current?.dispose();
         };
       }
-    }, [uploadedImage]);
+    }, [uploadedImage, isGridVisible]); // Redraw the grid when `isGridVisible` changes
 
     // Function to draw a grid over the canvas
     const drawGrid = () => {
@@ -66,6 +69,9 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       const gridSize = 50; // Grid size (adjustable)
       const width = fabricCanvas.current.width!;
       const height = fabricCanvas.current.height!;
+
+      // Clear any previous grid
+      fabricCanvas.current.getObjects("line").forEach(line => fabricCanvas.current?.remove(line));
 
       // Horizontal lines
       for (let y = 0; y < height; y += gridSize) {
@@ -218,6 +224,11 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       return edgeData;
     };
 
+    // Toggle the grid visibility
+    const toggleGrid = () => {
+      setIsGridVisible(prev => !prev);
+    };
+
     return (
       <div className="image-canvas-container">
         {uploadedImage && (
@@ -228,6 +239,9 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         <canvas ref={fabricCanvasRef} />
         <button className="segment-button" onClick={outlineImage}>
           Outline Image
+        </button>
+        <button className="toggle-grid-button" onClick={toggleGrid}>
+          {isGridVisible ? "Hide Grid" : "Show Grid"}
         </button>
       </div>
     );

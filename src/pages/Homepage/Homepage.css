@@ -76,7 +76,7 @@
   border: none;
   cursor: pointer;
   background-color: #ffd8c5;
-  font-weight: bold;
+  /* font-weight: bold; */
   font-family: 'Bungee', cursive;
 }
 
