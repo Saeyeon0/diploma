@@ -13,13 +13,14 @@ import "./Toolbar.css";
 interface ToolbarProps {
   onUndo: () => void;
   onRedo: () => void;
+  toggleFrameEditability: () => void;
 }
 
 interface TextBoxData {
   id: string;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ onUndo, onRedo }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ onUndo, onRedo, toggleFrameEditability }) => {
   const [textBoxes, setTextBoxes] = useState<TextBoxData[]>([]);
 
   const handleAddTextBox = () => {
@@ -45,7 +46,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ onUndo, onRedo }) => {
         <button className="toolbar-button" title="Cursor">
           <FontAwesomeIcon icon={faMousePointer} />
         </button>
-        <button className="toolbar-button" title="Frame">
+        <button className="toolbar-button" title="Frame" onClick={toggleFrameEditability}>
           <FontAwesomeIcon icon={faCropSimple} />
         </button>
         <button className="toolbar-button" title="Add Text" onClick={handleAddTextBox}>

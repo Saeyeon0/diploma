@@ -18,6 +18,7 @@ const Editor: React.FC = () => {
   const [segmentedImage, setSegmentedImage] = useState<string | null>(null);
   const fabricCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const dropAreaRef = useRef<HTMLDivElement | null>(null);
+  const [isFrameEditable, setIsFrameEditable] = useState(false);
 
   useEffect(() => {
     const fetchColors = async () => {
@@ -69,6 +70,10 @@ const Editor: React.FC = () => {
 
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
+  };
+
+  const toggleFrameEditability = () => {
+    setIsFrameEditable((prev) => !prev);
   };
 
   const pushToHistory = (
@@ -193,6 +198,7 @@ const Editor: React.FC = () => {
               onDeleteImage={handleDeleteImage}
               showGrid={false} // Grid controls have been removed
               gridSpacing={50} // This value can be used in the ImageCanvas component if needed
+              toggleFrameEditability={toggleFrameEditability}
             />
           ) : (
             <div className="plus-sign">
@@ -204,7 +210,7 @@ const Editor: React.FC = () => {
           <ColorsList uploadedImage={uploadedImage} />
         </div>
       </div>
-      <Toolbar onUndo={handleUndo} onRedo={handleRedo} />
+      <Toolbar onUndo={handleUndo} onRedo={handleRedo} toggleFrameEditability={toggleFrameEditability} />
     </div>
   );
 };

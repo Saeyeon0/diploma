@@ -8,6 +8,7 @@ interface ImageCanvasProps {
   onDeleteImage: () => void;
   showGrid?: boolean;  // Optional prop to toggle grid visibility
   gridSpacing?: number;
+  toggleFrameEditability: () => void;
 }
 
 const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
@@ -15,9 +16,11 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
     const fabricCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const fabricCanvas = useRef<fabric.Canvas | null>(null);
     const [isGridVisible, setIsGridVisible] = useState(true); // State for grid visibility
+    const [isFrameEditable, setIsFrameEditable] = useState(false);
 
     useImperativeHandle(ref, () => fabricCanvasRef.current as HTMLCanvasElement);
 
+    
     useEffect(() => {
       if (fabricCanvasRef.current) {
         fabricCanvas.current = new fabric.Canvas(fabricCanvasRef.current, {
@@ -46,13 +49,21 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
           img.set({
             left: (fabricCanvas.current!.width! - newWidth) / 2,
             top: (fabricCanvas.current!.height! - newHeight) / 2,
+            selectable: isFrameEditable,
+            hasControls: isFrameEditable,
+            hasBorders: isFrameEditable,
+            lockMovementX: !isFrameEditable,
+            lockMovementY: !isFrameEditable,
+            lockScalingX: !isFrameEditable,
+            lockScalingY: !isFrameEditable,
+            lockRotation: !isFrameEditable,
           });
 
           fabricCanvas.current?.add(img);
           fabricCanvas.current?.renderAll();
 
           if (isGridVisible) {
-            drawGrid(); // Draw the grid if it's visible
+            drawGrid();
           }
         });
 
@@ -60,7 +71,7 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
           fabricCanvas.current?.dispose();
         };
       }
-    }, [uploadedImage, isGridVisible]); // Redraw the grid when `isGridVisible` changes
+    }, [uploadedImage, isGridVisible, isFrameEditable]);
 
     // Function to draw a grid over the canvas
     const drawGrid = () => {
@@ -94,6 +105,27 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       }
 
       fabricCanvas.current.renderAll(); // Rerender the canvas to display the grid
+    };
+
+    const toggleFrameEditability = () => {
+      setIsFrameEditable((prev) => !prev);
+
+      if (fabricCanvas.current) {
+        const img = fabricCanvas.current.getObjects("image")[0] as fabric.Image;
+        if (img) {
+          img.set({
+            selectable: !isFrameEditable,
+            hasControls: !isFrameEditable,
+            hasBorders: !isFrameEditable,
+            lockMovementX: isFrameEditable,
+            lockMovementY: isFrameEditable,
+            lockScalingX: isFrameEditable,
+            lockScalingY: isFrameEditable,
+            lockRotation: isFrameEditable,
+          });
+          fabricCanvas.current.renderAll();
+        }
+      }
     };
 
     const outlineImage = () => {
@@ -242,6 +274,9 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         </button>
         <button className="toggle-grid-button" onClick={toggleGrid}>
           {isGridVisible ? "Hide Grid" : "Show Grid"}
+        </button>
+        <button className="toggle-grid-button" onClick={toggleFrameEditability}>
+          {isFrameEditable ? "Lock Frame" : "Edit Frame"}
         </button>
       </div>
     );
