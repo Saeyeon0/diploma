@@ -22,6 +22,7 @@ interface TextBoxData {
 
 const Toolbar: React.FC<ToolbarProps> = ({ onUndo, onRedo, toggleFrameEditability }) => {
   const [textBoxes, setTextBoxes] = useState<TextBoxData[]>([]);
+  const [isFrameEditable, setIsFrameEditable] = useState(false); // Track frame state
 
   const handleAddTextBox = () => {
     const newTextBox: TextBoxData = {
@@ -32,6 +33,11 @@ const Toolbar: React.FC<ToolbarProps> = ({ onUndo, onRedo, toggleFrameEditabilit
 
   const handleDeleteTextBox = (id: string) => {
     setTextBoxes(textBoxes.filter((box) => box.id !== id));
+  };
+
+  const handleToggleFrame = () => {
+    setIsFrameEditable((prev) => !prev); // Toggle state
+    toggleFrameEditability(); // Call parent function
   };
 
   return (
@@ -46,7 +52,12 @@ const Toolbar: React.FC<ToolbarProps> = ({ onUndo, onRedo, toggleFrameEditabilit
         <button className="toolbar-button" title="Cursor">
           <FontAwesomeIcon icon={faMousePointer} />
         </button>
-        <button className="toolbar-button" title="Frame" onClick={toggleFrameEditability}>
+        <button
+          className={`toolbar-button ${isFrameEditable ? "active" : ""}`}
+          title="Frame"
+          onClick={handleToggleFrame}
+        >
+          {/* {isFrameEditable ? "Lock Frame" : "Edit Frame"} */}
           <FontAwesomeIcon icon={faCropSimple} />
         </button>
         <button className="toolbar-button" title="Add Text" onClick={handleAddTextBox}>

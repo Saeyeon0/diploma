@@ -161,31 +161,62 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
           const usedColorIds = new Set<string>();
           let colorCounter = 1;
   
-          extractedColors
-            .filter((color) => isSaturatedAndBright(color) || isGrayscale(color))
-            .forEach((extractedColor, index) => {
-              const closestColor = findClosestColor(extractedColor, colors);
+          // Get pixel data from the canvas to analyze regions
+          const imageData = ctx.getImageData(0, 0, width, height);
+          const pixelData = imageData.data;
   
-              // Check if the color is too similar to any already added color or is a duplicate
-              const isDuplicate = matchedColors.some(
-                (existingColor) =>
-                  existingColor.hex === closestColor?.hex || // Check hex directly for duplicates
-                  colorDistance(extractedColor, hexToRgb(existingColor.hex)) < 40
-              );
-  
-              if (closestColor && !isDuplicate) {
-                matchedColors.push({ ...closestColor, number: colorCounter });
-                usedColorIds.add(closestColor._id);
-  
-                ctx.fillStyle = "#000";
-                ctx.font = "20px Arial";
-                ctx.fillText(`${colorCounter}`, 20 + index * 30, 40 + index * 30);
-                colorCounter++;
-              } else {
-                // Handle case where no match is found or color is too similar
-                console.log("Color is too similar or no match found:", extractedColor);
-              }
-            });
+          // Inside your color matching loop
+extractedColors
+.filter((color) => isSaturatedAndBright(color) || isGrayscale(color))
+.forEach((extractedColor, index) => {
+  const closestColor = findClosestColor(extractedColor, colors);
+
+  // Check if the color is too similar to any already added color or is a duplicate
+  const isDuplicate = matchedColors.some(
+    (existingColor) =>
+      existingColor.hex === closestColor?.hex || // Check hex directly for duplicates
+      colorDistance(extractedColor, hexToRgb(existingColor.hex)) < 40
+  );
+
+  if (closestColor && !isDuplicate) {
+    matchedColors.push({ ...closestColor, number: colorCounter });
+    usedColorIds.add(closestColor._id);
+
+    // Highlight the areas with this color and add numbers
+    for (let i = 0; i < pixelData.length; i += 4) {
+      const r = pixelData[i];
+      const g = pixelData[i + 1];
+      const b = pixelData[i + 2];
+      const a = pixelData[i + 3];
+
+      const currentPixelRgb: [number, number, number] = [r, g, b];
+
+      // Check if this pixel color matches the extracted color
+      if (colorDistance(currentPixelRgb, extractedColor) < 40) {
+        const x = (i / 4) % width;
+        const y = Math.floor(i / 4 / width);
+
+        // Mark the pixel's region on the canvas
+        ctx.fillStyle = closestColor.hex;
+        ctx.fillRect(x, y, 1, 1); // Adjust size as necessary (e.g., larger squares)
+
+        // Draw the number overlay (ensure it's readable)
+        ctx.fillStyle = "#000"; // Black for contrast
+        ctx.font = "14px Arial";
+        ctx.textBaseline = "top"; // Ensure text is positioned correctly
+        ctx.textAlign = "left";  // Align text to the left of the coordinates
+
+        // Add some padding to prevent number from being too close to the edge
+        ctx.fillText(`${colorCounter}`, x + 3, y + 3);  // Adjust x and y for padding
+      }
+    }
+
+    colorCounter++;
+  } else {
+    // Handle case where no match is found or color is too similar
+    console.log("Color is too similar or no match found:", extractedColor);
+  }
+});
   
           setHighlightedColors(matchedColors);
           setIsVisible(true);
