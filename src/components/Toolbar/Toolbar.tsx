@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { fabric } from "fabric";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMousePointer,
@@ -8,21 +9,22 @@ import {
   faRotateRight,
 } from "@fortawesome/free-solid-svg-icons";
 import TextBox from "../TextBox/TextBox";
+import FrameTool from "../FrameTool/FrameTool";
 import "./Toolbar.css";
 
 interface ToolbarProps {
   onUndo: () => void;
   onRedo: () => void;
-  toggleFrameEditability: () => void;
 }
 
 interface TextBoxData {
   id: string;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ onUndo, onRedo, toggleFrameEditability }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ onUndo, onRedo }) => {
   const [textBoxes, setTextBoxes] = useState<TextBoxData[]>([]);
-  const [isFrameEditable, setIsFrameEditable] = useState(false); // Track frame state
+  const fabricCanvas = useRef<fabric.Canvas | null>(null); // Ensure this is correctly initialized elsewhere
+  const [isFrameEditable, setIsFrameEditable] = useState(false);
 
   const handleAddTextBox = () => {
     const newTextBox: TextBoxData = {
@@ -35,9 +37,25 @@ const Toolbar: React.FC<ToolbarProps> = ({ onUndo, onRedo, toggleFrameEditabilit
     setTextBoxes(textBoxes.filter((box) => box.id !== id));
   };
 
-  const handleToggleFrame = () => {
-    setIsFrameEditable((prev) => !prev); // Toggle state
-    toggleFrameEditability(); // Call parent function
+  const toggleFrameEditability = () => {
+    setIsFrameEditable((prev) => !prev);
+
+    if (fabricCanvas.current) {
+      const img = fabricCanvas.current.getObjects("image")[0] as fabric.Image;
+      if (img) {
+        img.set({
+          selectable: !isFrameEditable,
+          hasControls: !isFrameEditable,
+          hasBorders: !isFrameEditable,
+          lockMovementX: isFrameEditable,
+          lockMovementY: isFrameEditable,
+          lockScalingX: isFrameEditable,
+          lockScalingY: isFrameEditable,
+          lockRotation: isFrameEditable,
+        });
+        fabricCanvas.current.renderAll();
+      }
+    }
   };
 
   return (
@@ -52,14 +70,10 @@ const Toolbar: React.FC<ToolbarProps> = ({ onUndo, onRedo, toggleFrameEditabilit
         <button className="toolbar-button" title="Cursor">
           <FontAwesomeIcon icon={faMousePointer} />
         </button>
-        <button
-          className={`toolbar-button ${isFrameEditable ? "active" : ""}`}
-          title="Frame"
-          onClick={handleToggleFrame}
-        >
-          {/* {isFrameEditable ? "Lock Frame" : "Edit Frame"} */}
-          <FontAwesomeIcon icon={faCropSimple} />
-        </button>
+
+        {/* Integrate FrameTool as a separate component */}
+        <FrameTool fabricCanvas={fabricCanvas} />
+
         <button className="toolbar-button" title="Add Text" onClick={handleAddTextBox}>
           <FontAwesomeIcon icon={faFont} />
         </button>

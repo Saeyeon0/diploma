@@ -12,10 +12,15 @@ const Homepage: React.FC = () => {
   return (
     <div className="homepage-container">
       <div className="homepage-text">
-        <h1 className="homepage-title">Vector Segment Layouts of Paintings</h1>
+        <h1 className="homepage-title">ASG Art Therapy:</h1>
+        <h2 className="homepage-subtitle">Color, Create, Heal</h2>
         <p className="homepage-description">
-          This app will help visualize and create detailed vector segments for
-          various paintings.
+          Our web app enables users to visualize and generate detailed vector
+          segments for various paintings, transforming images into structured,
+          paint-by-numbers compositions. Designed for precision and creativity,
+          it streamlines the process of segmenting, numbering, and organizing
+          colors, making it an ideal tool for art therapy, custom artwork, and
+          paint kit production.
         </p>
         <div className="homepage-button">
           <button className="button-start" onClick={handleStartProject}>

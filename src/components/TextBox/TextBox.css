@@ -29,3 +29,20 @@
     cursor: pointer;
     font-size: 12px;
   }
+
+  .hidden-controls .react-resizable-handle {
+    display: none !important; /* Hide resize handle */
+  }
+  
+  .hidden-controls .delete-button {
+    display: none !important; /* Hide close button */
+  }
+  
+  .resizable-box {
+    border: 1px solid transparent; /* Hide border when not editing */
+  }
+  
+  .editing .resizable-box {
+    border: 1px solid #ccc; /* Show border when editing */
+  }
+  

@@ -2,6 +2,7 @@ import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState } f
 import { fabric } from "fabric";
 import "./ImageCanvas.css";
 import Toolbar from "../Toolbar/Toolbar";
+import FrameTool from "../FrameTool/FrameTool";
 
 interface ImageCanvasProps {
   uploadedImage: string;

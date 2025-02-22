@@ -6,11 +6,11 @@
 }
 
 .search-input-container {
-    position: relative;
-    width: 100%;
-    max-width: calc(100% - 10rem);
-    margin-top: 3rem;
-  }
+  position: relative;
+  width: 100%;
+  max-width: calc(100% - 10rem);
+  margin-top: 3rem;
+}
 
 .search-input {
   width: 100%;
@@ -20,7 +20,7 @@
   border: 1px solid #ccc;
   outline: none;
   background-color: #e5e3e3;
-  font-family: 'Silkscreen', sans-serif;
+  font-family: "Gruppo", serif;
 }
 
 .search-input:focus {
@@ -28,11 +28,11 @@
 }
 
 .search-icon {
-    position: absolute;
-    right: 0.1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1.2rem;
-    color: #666;
-    pointer-events: none;
-  }
+  position: absolute;
+  right: 0.1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  color: #666;
+  pointer-events: none;
+}

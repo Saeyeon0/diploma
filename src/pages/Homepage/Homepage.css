@@ -12,20 +12,29 @@
   margin-left: 1rem;
   text-align: left;
   margin-bottom: 2rem;
-  font-family: 'Bungee', cursive;
+  font-family: "Gruppo", serif;
 }
 
 .homepage-title {
-  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-size: clamp(3rem, 7vw, 4rem);
+  color: #ffd8c5;
+  line-height: 1.2;
+  margin-bottom: 0;
+}
+
+.homepage-subtitle {
+  font-size: clamp(2rem, 3vw, 3rem);
   color: #e5e3e3;
   line-height: 1.2;
   margin-bottom: 20px;
+  margin-top: 0;
+  font-weight: 100;
 }
 
 .homepage-description {
   font-size: clamp(1rem, 2.3vw, 1.1rem);
-  color: #777;
-  line-height: 1;
+  color: #e5e3e3;
+  line-height: 1.3;
   margin-bottom: 20px;
 }
 
@@ -69,7 +78,7 @@
 }
 
 .homepage-button .button-start {
-  font-size: 1rem;
+  font-size: 0.9rem;
   padding: 0.7rem 1.2rem;
   margin: 0.5rem 0;
   border-radius: 5px;
@@ -77,7 +86,7 @@
   cursor: pointer;
   background-color: #ffd8c5;
   /* font-weight: bold; */
-  font-family: 'Bungee', cursive;
+  font-family: 'Silkscreen', sans-serif;
 }
 
 .homepage-button .button-start:hover {

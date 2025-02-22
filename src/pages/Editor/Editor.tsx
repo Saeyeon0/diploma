@@ -210,7 +210,7 @@ const Editor: React.FC = () => {
           <ColorsList uploadedImage={uploadedImage} />
         </div>
       </div>
-      <Toolbar onUndo={handleUndo} onRedo={handleRedo} toggleFrameEditability={toggleFrameEditability} />
+      <Toolbar onUndo={handleUndo} onRedo={handleRedo}/>
     </div>
   );
 };
