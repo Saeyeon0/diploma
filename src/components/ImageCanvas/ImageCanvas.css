@@ -6,7 +6,7 @@
 .image-close-button {
   position: absolute;
   top: -8px;
-  right: -8px;
+  right: 30px;
   width: 24px;
   height: 24px;
   background-color: #282727;

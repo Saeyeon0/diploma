@@ -145,6 +145,15 @@ select {
   transform: scale(1.1);
 }
 
+.colorslist-text {
+  color: #000;
+  font-family: 'Silkscreen', sans-serif;
+}
+
+.placeholder {
+  font-family: "Gruppo", serif;
+}
+
 @media (max-width: 768px) {
   .color-item {
     width: 30px;

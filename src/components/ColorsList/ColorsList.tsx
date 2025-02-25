@@ -19,10 +19,12 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [highlightedColors, setHighlightedColors] = useState<Color[]>([]);
-  const [isVisible, setIsVisible] = useState<boolean>(false); // Initially hidden
+  const [sortedExtractedColors, setSortedExtractedColors] = useState<Color[]>(
+    []
+  ); // Store extracted colors persistently
+  const [isVisible, setIsVisible] = useState<boolean>(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Fetch colors from the server
   useEffect(() => {
     fetch("http://localhost:5001/colors")
       .then((response) => {
@@ -45,13 +47,11 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
       });
   }, []);
 
-  // Utility to convert HEX to RGB
   const hexToRgb = (hex: string): [number, number, number] => {
     const bigint = parseInt(hex.slice(1), 16);
     return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
   };
 
-  // Calculate color distance
   const colorDistance = (
     rgb1: [number, number, number],
     rgb2: [number, number, number]
@@ -63,10 +63,9 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
     );
   };
 
-  // Check if a color is grayscale
   const isGrayscale = (rgb: [number, number, number]): boolean => {
     const [r, g, b] = rgb;
-    const threshold = 20; // Allowable deviation for grayscale tones
+    const threshold = 20;
     return (
       Math.abs(r - g) < threshold &&
       Math.abs(g - b) < threshold &&
@@ -74,29 +73,25 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
     );
   };
 
-  // Check if a color is sufficiently saturated and bright
   const isSaturatedAndBright = (rgb: [number, number, number]): boolean => {
     const [r, g, b] = rgb;
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
     const saturation = max - min;
     const brightness = max;
-
-    return saturation > 30 && brightness > 50; // Adjust these thresholds as needed
+    return saturation > 30 && brightness > 50;
   };
 
-  // Find the closest color from the database, with grayscale filtering
   const findClosestColor = (
     extractedColor: [number, number, number],
     dbColors: Color[],
     threshold: number = 50
   ) => {
     if (isGrayscale(extractedColor)) {
-      // If grayscale, map to either black or white based on intensity
-      const intensity = extractedColor[0]; // R == G == B in grayscale
+      const intensity = extractedColor[0];
       if (intensity < 128)
-        return dbColors.find((color) => color.hex === "#000000")!; // Black
-      return dbColors.find((color) => color.hex === "#FFFFFF")!; // White
+        return dbColors.find((color) => color.hex === "#000000")!;
+      return dbColors.find((color) => color.hex === "#FFFFFF")!;
     }
 
     let closestColor = dbColors[0];
@@ -111,32 +106,26 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
       }
     });
 
-    // Return null if no closest color is found
     return closestColor || null;
   };
 
-  // Extract and match colors using ColorThief
   useEffect(() => {
     if (uploadedImage && colors.length > 0) {
       const img = new Image();
-      img.crossOrigin = "Anonymous";  // Ensure the image can be loaded from different origins
+      img.crossOrigin = "Anonymous";
       img.src = uploadedImage;
-  
+
       img.onload = () => {
-        console.log("Image loaded:", img.width, img.height); // Debugging output
         const canvas = canvasRef.current;
         if (!canvas) return;
-  
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
-  
-        // Scale down the image if it’s too large
+
         const maxWidth = 800;
         const maxHeight = 800;
-  
         let width = img.width;
         let height = img.height;
-  
+
         if (width > maxWidth || height > maxHeight) {
           const aspectRatio = width / height;
           if (width > height) {
@@ -147,97 +136,68 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
             width = height * aspectRatio;
           }
         }
-  
+
         canvas.width = width;
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
-  
+
         const colorThief = new ColorThief();
         try {
           const extractedColors = colorThief.getPalette(img, 24);
-          console.log("Extracted colors:", extractedColors); // Debugging output
-  
+
           const matchedColors: Color[] = [];
           const usedColorIds = new Set<string>();
           let colorCounter = 1;
-  
-          // Get pixel data from the canvas to analyze regions
-          const imageData = ctx.getImageData(0, 0, width, height);
-          const pixelData = imageData.data;
-  
-          // Inside your color matching loop
-extractedColors
-.filter((color) => isSaturatedAndBright(color) || isGrayscale(color))
-.forEach((extractedColor, index) => {
-  const closestColor = findClosestColor(extractedColor, colors);
 
-  // Check if the color is too similar to any already added color or is a duplicate
-  const isDuplicate = matchedColors.some(
-    (existingColor) =>
-      existingColor.hex === closestColor?.hex || // Check hex directly for duplicates
-      colorDistance(extractedColor, hexToRgb(existingColor.hex)) < 40
-  );
+          extractedColors
+            .filter((color) => isSaturatedAndBright(color) || isGrayscale(color))
+            .forEach((extractedColor) => {
+              const closestColor = findClosestColor(extractedColor, colors);
+              const isDuplicate = matchedColors.some(
+                (existingColor) =>
+                  existingColor.hex === closestColor?.hex ||
+                  colorDistance(extractedColor, hexToRgb(existingColor.hex)) < 40
+              );
 
-  if (closestColor && !isDuplicate) {
-    matchedColors.push({ ...closestColor, number: colorCounter });
-    usedColorIds.add(closestColor._id);
+              if (closestColor && !isDuplicate) {
+                matchedColors.push({ ...closestColor, number: colorCounter });
+                usedColorIds.add(closestColor._id);
+                colorCounter++;
+              }
+            });
 
-    // Highlight the areas with this color and add numbers
-    for (let i = 0; i < pixelData.length; i += 4) {
-      const r = pixelData[i];
-      const g = pixelData[i + 1];
-      const b = pixelData[i + 2];
-      const a = pixelData[i + 3];
-
-      const currentPixelRgb: [number, number, number] = [r, g, b];
-
-      // Check if this pixel color matches the extracted color
-      if (colorDistance(currentPixelRgb, extractedColor) < 40) {
-        const x = (i / 4) % width;
-        const y = Math.floor(i / 4 / width);
-
-        // Mark the pixel's region on the canvas
-        ctx.fillStyle = closestColor.hex;
-        ctx.fillRect(x, y, 1, 1); // Adjust size as necessary (e.g., larger squares)
-
-        // Draw the number overlay (ensure it's readable)
-        ctx.fillStyle = "#000"; // Black for contrast
-        ctx.font = "14px Arial";
-        ctx.textBaseline = "top"; // Ensure text is positioned correctly
-        ctx.textAlign = "left";  // Align text to the left of the coordinates
-
-        // Add some padding to prevent number from being too close to the edge
-        ctx.fillText(`${colorCounter}`, x + 3, y + 3);  // Adjust x and y for padding
-      }
-    }
-
-    colorCounter++;
-  } else {
-    // Handle case where no match is found or color is too similar
-    console.log("Color is too similar or no match found:", extractedColor);
-  }
-});
-  
           setHighlightedColors(matchedColors);
+
+          // Keep extracted colors persistent unless reloaded
+          setSortedExtractedColors((prevColors) => {
+            const highestNumber = prevColors.reduce((max, color) => Math.max(max, color.number || 0), 0);
+            let colorCounter = highestNumber + 1;
+          
+            const newColors = matchedColors
+              .filter((color) => !prevColors.some((prev) => prev.hex === color.hex))
+              .map((color) => ({
+                ...color,
+                number: colorCounter++,
+              }));
+          
+            return [...prevColors, ...newColors];
+          });
+          
+
           setIsVisible(true);
         } catch (error) {
           console.error("Error extracting colors:", error);
         }
       };
-  
+
       img.onerror = () => {
         console.error("Failed to load the image for color extraction.");
       };
     }
   }, [uploadedImage, colors]);
-  
-  // Toggle visibility of the colors list
+
   const toggleVisibility = () => {
     setIsVisible(!isVisible);
-    if (isVisible) {
-      // Clear the highlighted colors when hiding the panel
-      setHighlightedColors([]);
-    }
   };
 
   if (loading) {
@@ -262,9 +222,11 @@ extractedColors
       ></canvas>
 
       {isVisible && (
-        <div className="colors-list">
-          {highlightedColors.length > 0
-            ? highlightedColors.map((color, index) => (
+        <>
+          <div className="colors-list">
+            <h4 className="colorslist-text">Extracted Colors</h4>
+            {sortedExtractedColors.length > 0 ? (
+              sortedExtractedColors.map((color, index) => (
                 <div
                   key={index}
                   className="color-item"
@@ -274,16 +236,29 @@ extractedColors
                   {color.name}
                 </div>
               ))
-            : colors.map((color, index) => (
+            ) : (
+              <p className="placeholder">No extracted colors yet.</p>
+            )}
+          </div>
+
+          <div className="colors-list">
+            <h4 className="colorslist-text">Current Image Colors</h4>
+            {highlightedColors.length > 0 ? (
+              highlightedColors.map((color, index) => (
                 <div
                   key={index}
                   className="color-item"
                   style={{ backgroundColor: color.hex }}
                 >
+                  <span className="color-number">{color.number}</span>
                   {color.name}
                 </div>
-              ))}
-        </div>
+              ))
+            ) : (
+              <p className="placeholder">No colors extracted.</p>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
