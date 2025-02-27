@@ -106,28 +106,37 @@ const Editor: React.FC = () => {
 
   const handleExportPDF = () => {
     const canvasElement = fabricCanvasRef.current;
-
-    if (!canvasElement) return;
-
-    const canvasDataUrl = canvasElement.toDataURL("image/png");
-
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "px",
-      format: [canvasElement.width, canvasElement.height],
-    });
-
-    doc.addImage(
-      canvasDataUrl,
-      "PNG",
-      0,
-      0,
-      canvasElement.width,
-      canvasElement.height
-    );
-
-    doc.save("exported-image.pdf");
-  };
+  
+    if (!canvasElement || !uploadedImage) return;
+  
+    // Create a temporary image element to get the image's dimensions
+    const imageElement = new Image();
+    imageElement.src = uploadedImage;
+  
+    imageElement.onload = () => {
+      const imgWidth = imageElement.width;
+      const imgHeight = imageElement.height;
+  
+      // Create the PDF using the image's width and height
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [imgWidth, imgHeight],
+      });
+  
+      // Add the image to the PDF at the correct size
+      doc.addImage(
+        uploadedImage,
+        "PNG",
+        0,
+        0,
+        imgWidth,
+        imgHeight
+      );
+  
+      doc.save("exported-image.pdf");
+    };
+  };  
 
   const handleUndo = () => {
     if (historyIndex > 0) {

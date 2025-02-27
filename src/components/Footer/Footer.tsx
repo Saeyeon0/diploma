@@ -17,7 +17,7 @@ const Footer: React.FC = () => {
         </li>
       </ul>
       <p className="footer-credits">
-        © 2024 Vector Segment Layouts. All rights reserved.
+        © 2025 ASG Therapy. All rights reserved.
       </p>
     </footer>
   );

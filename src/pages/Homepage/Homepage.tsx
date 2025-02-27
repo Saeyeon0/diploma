@@ -12,8 +12,8 @@ const Homepage: React.FC = () => {
   return (
     <div className="homepage-container">
       <div className="homepage-text">
-        <h1 className="homepage-title">ASG Art Therapy:</h1>
-        <h2 className="homepage-subtitle">Color, Create, Heal</h2>
+        <h1 className="homepage-title">ASG Therapy:</h1>
+        <h2 className="homepage-subtitle">Color / Art / Heal</h2>
         <p className="homepage-description">
           Our web app enables users to visualize and generate detailed vector
           segments for various paintings, transforming images into structured,
