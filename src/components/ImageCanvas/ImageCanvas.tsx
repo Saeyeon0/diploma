@@ -8,7 +8,7 @@ interface ImageCanvasProps {
   uploadedImage: string;
   onSegmentsUpdated?: (segmentedImageUrl: string) => void;
   onDeleteImage: () => void;
-  showGrid?: boolean;  // Optional prop to toggle grid visibility
+  showGrid?: boolean;
   gridSpacing?: number;
   toggleFrameEditability: () => void;
 }
@@ -188,7 +188,6 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         lockScalingY: false,
       });
 
-      // Set the background to white and clear the canvas
       fabricCanvas.current.setBackgroundColor("white", fabricCanvas.current.renderAll.bind(fabricCanvas.current));
 
       // Get the original image object and center it on the canvas
@@ -258,7 +257,6 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       return edgeData;
     };
 
-    // Toggle the grid visibility
     const toggleGrid = () => {
       setIsGridVisible(prev => !prev);
     };

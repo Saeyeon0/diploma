@@ -21,8 +21,9 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   const [highlightedColors, setHighlightedColors] = useState<Color[]>([]);
   const [sortedExtractedColors, setSortedExtractedColors] = useState<Color[]>(
     []
-  ); // Store extracted colors persistently
+  );
   const [isVisible, setIsVisible] = useState<boolean>(false);
+  const [numbersOnCanvas, setNumbersOnCanvas] = useState<{ x: number, y: number, number: number }[]>([]); // Store numbers persistently
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -109,131 +110,136 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
     return closestColor || null;
   };
 
-useEffect(() => {
-  if (uploadedImage && colors.length > 0) {
-    const img = new Image();
-    img.crossOrigin = "Anonymous";
-    img.src = uploadedImage;
+  useEffect(() => {
+    if (uploadedImage && colors.length > 0) {
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.src = uploadedImage;
 
-    img.onload = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      img.onload = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
 
-      const maxWidth = 800;
-      const maxHeight = 800;
-      let width = img.width;
-      let height = img.height;
+        const maxWidth = 800;
+        const maxHeight = 800;
+        let width = img.width;
+        let height = img.height;
 
-      if (width > maxWidth || height > maxHeight) {
-        const aspectRatio = width / height;
-        if (width > height) {
-          width = maxWidth;
-          height = width / aspectRatio;
-        } else {
-          height = maxHeight;
-          width = height * aspectRatio;
+        if (width > maxWidth || height > maxHeight) {
+          const aspectRatio = width / height;
+          if (width > height) {
+            width = maxWidth;
+            height = width / aspectRatio;
+          } else {
+            height = maxHeight;
+            width = height * aspectRatio;
+          }
         }
-      }
 
-      canvas.width = width;
-      canvas.height = height;
-      ctx.drawImage(img, 0, 0, width, height);
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
 
-      const colorThief = new ColorThief();
-      try {
-        const extractedColors = colorThief.getPalette(img, 24);
+        const colorThief = new ColorThief();
+        try {
+          const extractedColors = colorThief.getPalette(img, 24);
 
-        const matchedColors: Color[] = [];
-        const usedColorIds = new Set<string>();
-        let colorCounter = 1;
+          const matchedColors: Color[] = [];
+          const usedColorIds = new Set<string>();
+          let colorCounter = 1;
 
-        extractedColors
-          .filter((color) => isSaturatedAndBright(color) || isGrayscale(color))
-          .forEach((extractedColor) => {
-            const closestColor = findClosestColor(extractedColor, colors);
-            const isDuplicate = matchedColors.some(
-              (existingColor) =>
-                existingColor.hex === closestColor?.hex ||
-                colorDistance(extractedColor, hexToRgb(existingColor.hex)) < 40
-            );
+          extractedColors
+            .filter((color) => isSaturatedAndBright(color) || isGrayscale(color))
+            .forEach((extractedColor) => {
+              const closestColor = findClosestColor(extractedColor, colors);
+              const isDuplicate = matchedColors.some(
+                (existingColor) =>
+                  existingColor.hex === closestColor?.hex ||
+                  colorDistance(extractedColor, hexToRgb(existingColor.hex)) < 40
+              );
 
-            if (closestColor && !isDuplicate) {
-              matchedColors.push({ ...closestColor, number: colorCounter });
-              usedColorIds.add(closestColor._id);
-              colorCounter++;
+              if (closestColor && !isDuplicate) {
+                matchedColors.push({ ...closestColor, number: colorCounter });
+                usedColorIds.add(closestColor._id);
+                colorCounter++;
+              }
+            });
+
+          setHighlightedColors(matchedColors);
+
+          // Analyze image pixels and detect the area for each color
+          matchedColors.forEach((color) => {
+            const colorRgb = hexToRgb(color.hex);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = imageData.data;
+
+            let totalX = 0;
+            let totalY = 0;
+            let pixelCount = 0;
+
+            // Loop through all pixels in the canvas
+            for (let y = 0; y < canvas.height; y++) {
+              for (let x = 0; x < canvas.width; x++) {
+                const idx = (y * canvas.width + x) * 4;
+                const r = pixels[idx];
+                const g = pixels[idx + 1];
+                const b = pixels[idx + 2];
+
+                if (colorDistance([r, g, b], colorRgb) < 20) {
+                  totalX += x;
+                  totalY += y;
+                  pixelCount++;
+                }
+              }
+            }
+
+            if (pixelCount > 0) {
+              const centerX = totalX / pixelCount;
+              const centerY = totalY / pixelCount;
+
+              // Save the position of the number
+              setNumbersOnCanvas((prevNumbers) => [
+                ...prevNumbers,
+                { x: centerX, y: centerY, number: color.number || 0 },
+              ]);
+
+              // Draw the number at the detected center
+              ctx.fillStyle = "#000000"; // Set the color of the number (black)
+              ctx.font = "20px Arial";
+              ctx.fillText(color.number?.toString() || "", centerX, centerY);
             }
           });
 
-        setHighlightedColors(matchedColors);
+          setSortedExtractedColors((prevColors) => {
+            const highestNumber = prevColors.reduce(
+              (max, color) => Math.max(max, color.number || 0),
+              0
+            );
+            let colorCounter = highestNumber + 1;
 
-        // Analyze image pixels and detect the area for each color
-        matchedColors.forEach((color) => {
-          const colorRgb = hexToRgb(color.hex);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const pixels = imageData.data;
+            const newColors = matchedColors
+              .filter((color) => !prevColors.some((prev) => prev.hex === color.hex))
+              .map((color) => ({
+                ...color,
+                number: colorCounter++,
+              }));
 
-          let totalX = 0;
-          let totalY = 0;
-          let pixelCount = 0;
+            return [...prevColors, ...newColors];
+          });
 
-          // Loop through all pixels in the canvas
-          for (let y = 0; y < canvas.height; y++) {
-            for (let x = 0; x < canvas.width; x++) {
-              const idx = (y * canvas.width + x) * 4;
-              const r = pixels[idx];
-              const g = pixels[idx + 1];
-              const b = pixels[idx + 2];
+          setIsVisible(true);
+        } catch (error) {
+          console.error("Error extracting colors:", error);
+        }
+      };
 
-              if (colorDistance([r, g, b], colorRgb) < 20) {
-                totalX += x;
-                totalY += y;
-                pixelCount++;
-              }
-            }
-          }
-
-          if (pixelCount > 0) {
-            const centerX = totalX / pixelCount;
-            const centerY = totalY / pixelCount;
-
-            // Draw the number at the detected center
-            ctx.fillStyle = "#000000"; // Set the color of the number (black)
-            ctx.font = "20px Arial";
-            ctx.fillText(color.number?.toString() || "", centerX, centerY);
-          }
-        });
-
-        setSortedExtractedColors((prevColors) => {
-          const highestNumber = prevColors.reduce(
-            (max, color) => Math.max(max, color.number || 0),
-            0
-          );
-          let colorCounter = highestNumber + 1;
-
-          const newColors = matchedColors
-            .filter((color) => !prevColors.some((prev) => prev.hex === color.hex))
-            .map((color) => ({
-              ...color,
-              number: colorCounter++,
-            }));
-
-          return [...prevColors, ...newColors];
-        });
-
-        setIsVisible(true);
-      } catch (error) {
-        console.error("Error extracting colors:", error);
-      }
-    };
-
-    img.onerror = () => {
-      console.error("Failed to load the image for color extraction.");
-    };
-  }
-}, [uploadedImage, colors]);
-
+      img.onerror = () => {
+        console.error("Failed to load the image for color extraction.");
+      };
+    }
+  }, [uploadedImage, colors]);
 
   const toggleVisibility = () => {
     setIsVisible(!isVisible);

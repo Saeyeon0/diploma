@@ -106,7 +106,7 @@ const Editor: React.FC = () => {
 
   const handleExportPDF = () => {
     const canvasElement = fabricCanvasRef.current;
-  
+    
     if (!canvasElement || !uploadedImage) return;
   
     // Create a temporary image element to get the image's dimensions
@@ -117,24 +117,71 @@ const Editor: React.FC = () => {
       const imgWidth = imageElement.width;
       const imgHeight = imageElement.height;
   
-      // Create the PDF using the image's width and height
-      const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: [imgWidth, imgHeight],
-      });
+      // Create a temporary canvas to render the image without extra space
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      if (tempCtx) {
+        // Draw the image onto the temporary canvas to access its pixel data
+        tempCanvas.width = imgWidth;
+        tempCanvas.height = imgHeight;
+        tempCtx.drawImage(imageElement, 0, 0);
   
-      // Add the image to the PDF at the correct size
-      doc.addImage(
-        uploadedImage,
-        "PNG",
-        0,
-        0,
-        imgWidth,
-        imgHeight
-      );
+        // Get the image data from the canvas to find the bounds of the content
+        const imageData = tempCtx.getImageData(0, 0, imgWidth, imgHeight);
+        const data = imageData.data;
   
-      doc.save("exported-image.pdf");
+        let top = imgHeight;
+        let bottom = 0;
+        let left = imgWidth;
+        let right = 0;
+  
+        // Find the boundaries of the non-empty image
+        for (let y = 0; y < imgHeight; y++) {
+          for (let x = 0; x < imgWidth; x++) {
+            const index = (y * imgWidth + x) * 4; // RGBA index
+            const alpha = data[index + 3]; // Alpha channel (transparency)
+  
+            if (alpha > 0) { // If the pixel is not transparent
+              if (y < top) top = y;
+              if (y > bottom) bottom = y;
+              if (x < left) left = x;
+              if (x > right) right = x;
+            }
+          }
+        }
+  
+        // Calculate the width and height of the cropped image
+        const croppedWidth = right - left;
+        const croppedHeight = bottom - top;
+  
+        // Create a new temporary canvas to crop the image
+        const cropCanvas = document.createElement('canvas');
+        const cropCtx = cropCanvas.getContext('2d');
+        if (cropCtx) {
+          cropCanvas.width = croppedWidth;
+          cropCanvas.height = croppedHeight;
+  
+          // Draw the cropped section of the image onto the new canvas
+          cropCtx.drawImage(
+            imageElement,
+            left, top, croppedWidth, croppedHeight,
+            0, 0, croppedWidth, croppedHeight
+          );
+  
+          // Create the PDF using the cropped image's dimensions
+          const doc = new jsPDF({
+            orientation: "portrait",
+            unit: "px",
+            format: [croppedWidth, croppedHeight],
+          });
+  
+          // Add the cropped image to the PDF
+          doc.addImage(cropCanvas.toDataURL('image/png'), 'PNG', 0, 0, croppedWidth, croppedHeight);
+  
+          // Save the PDF
+          doc.save("exported-image.pdf");
+        }
+      }
     };
   };  
 
