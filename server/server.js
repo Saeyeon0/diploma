@@ -20,6 +20,6 @@ app.use(express.json());
 
 app.use('/colors', colorRoutes);
 
-app.listen(port, () => {
+app.listen(5001, '0.0.0.0', () => {
   console.log(`Server running at http://localhost:${port}`);
 });

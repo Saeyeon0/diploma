@@ -9,24 +9,29 @@
 }
 
 .editor-sidebar {
-  top: 5rem;
+  position: absolute;
+  top: 3rem;
+  left: -100%; /* Hide it off-screen initially */
   width: 15%;
+  height: 100vh;
   background-color: #282727;
-  display: none;
+  display: flex;
   flex-direction: column;
   padding: 1rem;
-  height: calc(100vh - 5rem);
   color: white;
+  transition: left 0.3s ease-in-out; /* Smooth sliding */
+  z-index: 1000;
+  border-radius: 10px;
 }
 
 .editor-sidebar.show {
-  display: flex;
+  left: 0; /* Slide it in */
 }
 
 .hamburger-menu {
   top: 6rem;
   left: 1rem;
-  background-color: #282727;
+  color: #0f0f0f;
   width: 40px;
   height: 40px;
   border-radius: 5px;
@@ -37,6 +42,7 @@
   z-index: 1000;
   background-color: transparent;
   font-size: 1.5rem;
+  position: fixed;
 }
 
 .hamburger-menu:hover {

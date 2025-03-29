@@ -22,7 +22,6 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
 
     useImperativeHandle(ref, () => fabricCanvasRef.current as HTMLCanvasElement);
 
-    
     useEffect(() => {
       if (fabricCanvasRef.current) {
         fabricCanvas.current = new fabric.Canvas(fabricCanvasRef.current, {
@@ -132,49 +131,38 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
 
     const outlineImage = () => {
       if (!fabricCanvas.current) return;
-
+    
       const imageObj = fabricCanvas.current.getObjects("image")[0] as fabric.Image;
       if (!imageObj) return;
-
+    
       const tempCanvas = document.createElement("canvas");
       const tempCtx = tempCanvas.getContext("2d");
       if (!tempCtx) return;
-
+    
       tempCanvas.width = imageObj.width!;
       tempCanvas.height = imageObj.height!;
       const imgElement = imageObj.getElement();
       tempCtx.drawImage(imgElement, 0, 0, tempCanvas.width, tempCanvas.height);
-
+    
       const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
       const data = imageData.data;
-
+    
       // Convert to grayscale
       for (let i = 0; i < data.length; i += 4) {
         const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
         data[i] = data[i + 1] = data[i + 2] = avg;
       }
-
-      // Apply edge detection using the Canny algorithm
-      const edgeData = cannyEdgeDetection(data, tempCanvas.width, tempCanvas.height);
-
-      // Set non-edge pixels to white and edge pixels to black
-      for (let i = 0; i < edgeData.length; i += 4) {
-        if (edgeData[i] === 255) {
-          edgeData[i] = 0;     // Red
-          edgeData[i + 1] = 0; // Green
-          edgeData[i + 2] = 0; // Blue
-        } else {
-          edgeData[i] = 255;     // Red
-          edgeData[i + 1] = 255; // Green
-          edgeData[i + 2] = 255; // Blue
-          edgeData[i + 3] = 255; // Full opacity (white background)
-        }
-      }
-
-      // Put the processed edge data back to the canvas
-      const finalImageData = new ImageData(edgeData, tempCanvas.width, tempCanvas.height);
+    
+      // Apply edge detection using the enhanced Canny algorithm
+      const edgeData = enhancedCannyEdgeDetection(data, tempCanvas.width, tempCanvas.height);
+    
+      // Post-process the edges to clean up small artifacts and make the outlines smoother
+      const processedEdgeData = cleanUpEdges(edgeData, tempCanvas.width, tempCanvas.height);
+    
+      // Set processed edges to the final image
+      const finalImageData = new ImageData(processedEdgeData, tempCanvas.width, tempCanvas.height);
       tempCtx.putImageData(finalImageData, 0, 0);
-
+    
       // Create a Fabric Image object from the outlined canvas
       const outlinedImage = new fabric.Image(tempCanvas, {
         left: 0,
@@ -187,9 +175,9 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         lockScalingX: false,
         lockScalingY: false,
       });
-
+    
       fabricCanvas.current.setBackgroundColor("white", fabricCanvas.current.renderAll.bind(fabricCanvas.current));
-
+    
       // Get the original image object and center it on the canvas
       const canvasWidth = fabricCanvas.current.width!;
       const canvasHeight = fabricCanvas.current.height!;
@@ -203,22 +191,51 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         lockMovementX: false,
         lockMovementY: false,
       });
-
+    
       // Add both images (original and traced) to the canvas
       fabricCanvas.current?.clear(); // Clear any existing objects
       fabricCanvas.current?.add(imageObj); // Add the original image
       fabricCanvas.current?.add(outlinedImage); // Add the traced image
-
+    
       fabricCanvas.current?.renderAll();
-
+    
       if (onSegmentsUpdated) {
         const segmentedImageUrl = tempCanvas.toDataURL("image/png");
         onSegmentsUpdated(segmentedImageUrl);
       }
     };
+    
+    // Function to clean up edges and make them more suitable for coloring
+    const cleanUpEdges = (data: Uint8ClampedArray, width: number, height: number) => {
+      const cleanedData = new Uint8ClampedArray(data);
+    
+      // Post-process to remove small noise and make the edges more continuous
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const i = (y * width + x) * 4;
+          const neighborValues = [
+            data[i - 4], data[i + 4], // Left and right neighbors
+            data[i - width * 4], data[i + width * 4], // Top and bottom neighbors
+          ];
+    
+          // If a pixel is an edge and at least one of its neighbors is also an edge, keep it
+          if (data[i] === 0) { // Black (edge)
+            const hasNeighborEdge = neighborValues.some(value => value === 0);
+            if (!hasNeighborEdge) {
+              cleanedData[i] = 255; // Set it to white if no neighbors are edges
+              cleanedData[i + 1] = 255;
+              cleanedData[i + 2] = 255;
+            }
+          }
+        }
+      }
+    
+      return cleanedData;
+    };
+    
 
-    // Canny edge detection implementation
-    const cannyEdgeDetection = (data: Uint8ClampedArray, width: number, height: number) => {
+    // Enhanced Canny edge detection
+    const enhancedCannyEdgeDetection = (data: Uint8ClampedArray, width: number, height: number) => {
       const edgeData = new Uint8ClampedArray(data.length);
       const sobelX = [
         [-1, 0, 1],
@@ -230,32 +247,34 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         [0, 0, 0],
         [-1, -2, -1],
       ];
-
+    
       for (let y = 1; y < height - 1; y++) {
         for (let x = 1; x < width - 1; x++) {
           let gx = 0, gy = 0;
-
+    
           for (let ky = -1; ky <= 1; ky++) {
             for (let kx = -1; kx <= 1; kx++) {
               const i = ((y + ky) * width + (x + kx)) * 4;
               const grayValue = (data[i] + data[i + 1] + data[i + 2]) / 3;
-
+    
               gx += grayValue * sobelX[ky + 1][kx + 1];
               gy += grayValue * sobelY[ky + 1][kx + 1];
             }
           }
-
+    
           const magnitude = Math.sqrt(gx * gx + gy * gy);
           const i = (y * width + x) * 4;
-          const edgeValue = magnitude > 180 ? 255 : 0;
-
+    
+          // If edge is detected, set to black, otherwise set to white
+          const edgeValue = magnitude > 150 ? 0 : 255;
+    
           edgeData[i] = edgeData[i + 1] = edgeData[i + 2] = edgeValue;
           edgeData[i + 3] = 255; // Full opacity
         }
       }
-
+    
       return edgeData;
-    };
+    };    
 
     const toggleGrid = () => {
       setIsGridVisible(prev => !prev);

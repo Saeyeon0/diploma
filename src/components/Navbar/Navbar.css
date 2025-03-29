@@ -4,7 +4,7 @@
   justify-content: space-between; /* Adjust alignment for items */
   padding: 1rem 2rem;
   text-align: center;
-  background-color: #282727;
+  background-color: #0f0f0f;
   color: white;
   position: relative;
   font-family: 'Silkscreen', sans-serif;
@@ -45,7 +45,7 @@
   cursor: pointer;
   border-radius: 7px;
   margin-top: 1rem;
-  margin-right: 1rem;
+  margin-right: 3rem;
   font-family: 'Silkscreen', sans-serif;
 }
 
