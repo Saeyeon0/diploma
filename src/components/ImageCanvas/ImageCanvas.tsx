@@ -233,6 +233,94 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       return cleanedData;
     };
     
+    const enhancedEdgeDetectionWithShadows = (data: Uint8ClampedArray, width: number, height: number) => {
+      const edgeData = new Uint8ClampedArray(data.length);
+      const sobelX = [
+        [-1, 0, 1],
+        [-2, 0, 2],
+        [-1, 0, 1],
+      ];
+      const sobelY = [
+        [1, 2, 1],
+        [0, 0, 0],
+        [-1, -2, -1],
+      ];
+    
+      // Apply Gaussian blur to reduce noise
+      const blurredData = applyGaussianBlur(data, width, height);
+    
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          let gx = 0, gy = 0;
+    
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              const i = ((y + ky) * width + (x + kx)) * 4;
+              const r = blurredData[i], g = blurredData[i + 1], b = blurredData[i + 2];
+              const grayValue = (r + g + b) / 3;
+    
+              gx += grayValue * sobelX[ky + 1][kx + 1];
+              gy += grayValue * sobelY[ky + 1][kx + 1];
+            }
+          }
+    
+          const magnitude = Math.sqrt(gx * gx + gy * gy);
+          const i = (y * width + x) * 4;
+    
+          // Set edge color based on the gradient magnitude
+          const edgeValue = magnitude > 150 ? 0 : 255;
+    
+          // Detect color edges (not just grayscale) for smoother transitions
+          if (magnitude > 50) {
+            edgeData[i] = edgeData[i + 1] = edgeData[i + 2] = edgeValue;
+          } else {
+            edgeData[i] = edgeData[i + 1] = edgeData[i + 2] = 255; // Non-edge pixels are white
+          }
+          edgeData[i + 3] = 255; // Full opacity
+        }
+      }
+    
+      return edgeData;
+    };
+    
+    // Function to apply Gaussian blur (for noise reduction)
+    const applyGaussianBlur = (data: Uint8ClampedArray, width: number, height: number) => {
+      const kernel = [
+        [1, 4, 6, 4, 1],
+        [4, 16, 24, 16, 4],
+        [6, 24, 36, 24, 6],
+        [4, 16, 24, 16, 4],
+        [1, 4, 6, 4, 1],
+      ];
+    
+      const kernelSum = kernel.flat().reduce((sum, value) => sum + value, 0);
+      const blurredData = new Uint8ClampedArray(data.length);
+    
+      for (let y = 2; y < height - 2; y++) {
+        for (let x = 2; x < width - 2; x++) {
+          let r = 0, g = 0, b = 0;
+    
+          for (let ky = -2; ky <= 2; ky++) {
+            for (let kx = -2; kx <= 2; kx++) {
+              const i = ((y + ky) * width + (x + kx)) * 4;
+              const weight = kernel[ky + 2][kx + 2];
+    
+              r += data[i] * weight;
+              g += data[i + 1] * weight;
+              b += data[i + 2] * weight;
+            }
+          }
+    
+          const i = (y * width + x) * 4;
+          blurredData[i] = r / kernelSum;
+          blurredData[i + 1] = g / kernelSum;
+          blurredData[i + 2] = b / kernelSum;
+          blurredData[i + 3] = 255; // Full opacity
+        }
+      }
+    
+      return blurredData;
+    };    
 
     // Enhanced Canny edge detection
     const enhancedCannyEdgeDetection = (data: Uint8ClampedArray, width: number, height: number) => {

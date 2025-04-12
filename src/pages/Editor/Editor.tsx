@@ -6,6 +6,7 @@ import { faBars } from "@fortawesome/free-solid-svg-icons";
 import { jsPDF } from "jspdf";
 import ColorsList from "../../components/ColorsList/ColorsList";
 import ImageCanvas from "../../components/ImageCanvas/ImageCanvas";
+import TextBox from "../../components/TextBox/TextBox";
 
 const Editor: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -252,8 +253,8 @@ const Editor: React.FC = () => {
                 setUploadedImage(segmentedImageUrl);
               }}
               onDeleteImage={handleDeleteImage}
-              showGrid={false} // Grid controls have been removed
-              gridSpacing={50} // This value can be used in the ImageCanvas component if needed
+              showGrid={false}
+              gridSpacing={50}
               toggleFrameEditability={toggleFrameEditability}
             />
           ) : (
