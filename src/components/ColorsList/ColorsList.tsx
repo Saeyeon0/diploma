@@ -12,18 +12,16 @@ interface Color {
 
 interface ColorsListProps {
   uploadedImage: string | null;
+  onNumbersDetected?: (numbers: { x: number; y: number; number: number }[]) => void;
 }
 
-const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
+const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage, onNumbersDetected }) => {
   const [colors, setColors] = useState<Color[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [highlightedColors, setHighlightedColors] = useState<Color[]>([]);
-  const [sortedExtractedColors, setSortedExtractedColors] = useState<Color[]>(
-    []
-  );
+  const [sortedExtractedColors, setSortedExtractedColors] = useState<Color[]>([]);
   const [isVisible, setIsVisible] = useState<boolean>(false);
-  const [numbersOnCanvas, setNumbersOnCanvas] = useState<{ x: number, y: number, number: number }[]>([]); // Store numbers persistently
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -35,9 +33,7 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
         return response.json();
       })
       .then((data) => {
-        const sortedColors = data.sort(
-          (a: Color, b: Color) => a.order - b.order
-        );
+        const sortedColors = data.sort((a: Color, b: Color) => a.order - b.order);
         setColors(sortedColors);
         setLoading(false);
       })
@@ -53,14 +49,11 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
     return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
   };
 
-  const colorDistance = (
-    rgb1: [number, number, number],
-    rgb2: [number, number, number]
-  ) => {
+  const colorDistance = (rgb1: [number, number, number], rgb2: [number, number, number]) => {
     return Math.sqrt(
       (rgb1[0] - rgb2[0]) ** 2 +
-        (rgb1[1] - rgb2[1]) ** 2 +
-        (rgb1[2] - rgb2[2]) ** 2
+      (rgb1[1] - rgb2[1]) ** 2 +
+      (rgb1[2] - rgb2[2]) ** 2
     );
   };
 
@@ -90,8 +83,7 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
   ) => {
     if (isGrayscale(extractedColor)) {
       const intensity = extractedColor[0];
-      if (intensity < 128)
-        return dbColors.find((color) => color.hex === "#000000")!;
+      if (intensity < 128) return dbColors.find((color) => color.hex === "#000000")!;
       return dbColors.find((color) => color.hex === "#FFFFFF")!;
     }
 
@@ -145,10 +137,10 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
         const colorThief = new ColorThief();
         try {
           const extractedColors = colorThief.getPalette(img, 24);
-
           const matchedColors: Color[] = [];
           const usedColorIds = new Set<string>();
           let colorCounter = 1;
+          const detectedNumbers: {x: number, y: number, number: number}[] = [];
 
           extractedColors
             .filter((color) => isSaturatedAndBright(color) || isGrayscale(color))
@@ -169,7 +161,6 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
 
           setHighlightedColors(matchedColors);
 
-          // Analyze image pixels and detect the area for each color
           matchedColors.forEach((color) => {
             const colorRgb = hexToRgb(color.hex);
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -179,7 +170,6 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
             let totalY = 0;
             let pixelCount = 0;
 
-            // Loop through all pixels in the canvas
             for (let y = 0; y < canvas.height; y++) {
               for (let x = 0; x < canvas.width; x++) {
                 const idx = (y * canvas.width + x) * 4;
@@ -199,18 +189,17 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
               const centerX = totalX / pixelCount;
               const centerY = totalY / pixelCount;
 
-              // Save the position of the number
-              setNumbersOnCanvas((prevNumbers) => [
-                ...prevNumbers,
-                { x: centerX, y: centerY, number: color.number || 0 },
-              ]);
+              detectedNumbers.push({ x: centerX, y: centerY, number: color.number || 0 });
 
-              // Draw the number at the detected center
-              ctx.fillStyle = "#000000"; // Set the color of the number (black)
+              ctx.fillStyle = "#000000";
               ctx.font = "20px Arial";
               ctx.fillText(color.number?.toString() || "", centerX, centerY);
             }
           });
+
+          if (onNumbersDetected) {
+            onNumbersDetected(detectedNumbers);
+          }
 
           setSortedExtractedColors((prevColors) => {
             const highestNumber = prevColors.reduce(
@@ -239,7 +228,7 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage }) => {
         console.error("Failed to load the image for color extraction.");
       };
     }
-  }, [uploadedImage, colors]);
+  }, [uploadedImage, colors, onNumbersDetected]);
 
   const toggleVisibility = () => {
     setIsVisible(!isVisible);

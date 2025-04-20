@@ -7,6 +7,13 @@ import { jsPDF } from "jspdf";
 import ColorsList from "../../components/ColorsList/ColorsList";
 import ImageCanvas from "../../components/ImageCanvas/ImageCanvas";
 import TextBox from "../../components/TextBox/TextBox";
+import { fabric } from 'fabric';
+
+interface NumberPosition {
+  x: number;
+  y: number;
+  number: number;
+}
 
 const Editor: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -20,6 +27,7 @@ const Editor: React.FC = () => {
   const fabricCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const dropAreaRef = useRef<HTMLDivElement | null>(null);
   const [isFrameEditable, setIsFrameEditable] = useState(false);
+  const [numberPositions, setNumberPositions] = useState<NumberPosition[]>([]);
 
   useEffect(() => {
     const fetchColors = async () => {
@@ -106,85 +114,85 @@ const Editor: React.FC = () => {
   };
 
   const handleExportPDF = () => {
-    const canvasElement = fabricCanvasRef.current;
-    
-    if (!canvasElement || !uploadedImage) return;
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !uploadedImage) return;
   
-    // Create a temporary image element to get the image's dimensions
-    const imageElement = new Image();
-    imageElement.src = uploadedImage;
+    // Get the Fabric.js canvas instance
+    const fabricCanvas = (canvas as any).fabricCanvas as fabric.Canvas;
+    if (!fabricCanvas) return;
   
-    imageElement.onload = () => {
-      const imgWidth = imageElement.width;
-      const imgHeight = imageElement.height;
+    // Create a temporary canvas for export
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return;
   
-      // Create a temporary canvas to render the image without extra space
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d');
-      if (tempCtx) {
-        // Draw the image onto the temporary canvas to access its pixel data
-        tempCanvas.width = imgWidth;
-        tempCanvas.height = imgHeight;
-        tempCtx.drawImage(imageElement, 0, 0);
+    // Get all objects and calculate bounds
+    const objects = fabricCanvas.getObjects();
+    if (objects.length === 0) return;
   
-        // Get the image data from the canvas to find the bounds of the content
-        const imageData = tempCtx.getImageData(0, 0, imgWidth, imgHeight);
-        const data = imageData.data;
+    // Calculate bounding box of all objects
+    const { left, top, width, height } = calculateContentBounds(objects);
   
-        let top = imgHeight;
-        let bottom = 0;
-        let left = imgWidth;
-        let right = 0;
+    // Set dimensions with padding
+    const padding = 20;
+    tempCanvas.width = width + padding * 2;
+    tempCanvas.height = height + padding * 2;
   
-        // Find the boundaries of the non-empty image
-        for (let y = 0; y < imgHeight; y++) {
-          for (let x = 0; x < imgWidth; x++) {
-            const index = (y * imgWidth + x) * 4; // RGBA index
-            const alpha = data[index + 3]; // Alpha channel (transparency)
+    // Create a temporary fabric canvas for export
+    const exportCanvas = new fabric.StaticCanvas(tempCanvas, {
+      width: tempCanvas.width,
+      height: tempCanvas.height,
+      backgroundColor: '#ffffff'
+    });
   
-            if (alpha > 0) { // If the pixel is not transparent
-              if (y < top) top = y;
-              if (y > bottom) bottom = y;
-              if (x < left) left = x;
-              if (x > right) right = x;
-            }
-          }
-        }
+    // Clone and position objects
+    objects.forEach(obj => {
+      const clonedObj = fabric.util.object.clone(obj);
+      clonedObj.set({
+        left: obj.left! - left + padding,
+        top: obj.top! - top + padding
+      });
+      exportCanvas.add(clonedObj);
+    });
   
-        // Calculate the width and height of the cropped image
-        const croppedWidth = right - left;
-        const croppedHeight = bottom - top;
+    exportCanvas.renderAll();
   
-        // Create a new temporary canvas to crop the image
-        const cropCanvas = document.createElement('canvas');
-        const cropCtx = cropCanvas.getContext('2d');
-        if (cropCtx) {
-          cropCanvas.width = croppedWidth;
-          cropCanvas.height = croppedHeight;
+    // Create PDF
+    const doc = new jsPDF({
+      orientation: width > height ? "landscape" : "portrait",
+      unit: "px",
+      format: [tempCanvas.width, tempCanvas.height]
+    });
   
-          // Draw the cropped section of the image onto the new canvas
-          cropCtx.drawImage(
-            imageElement,
-            left, top, croppedWidth, croppedHeight,
-            0, 0, croppedWidth, croppedHeight
-          );
+    // Add to PDF and save
+    doc.addImage(tempCanvas.toDataURL('image/png'), 'PNG', 0, 0, tempCanvas.width, tempCanvas.height);
+    doc.save("coloring-page.pdf");
+  };
   
-          // Create the PDF using the cropped image's dimensions
-          const doc = new jsPDF({
-            orientation: "portrait",
-            unit: "px",
-            format: [croppedWidth, croppedHeight],
-          });
-  
-          // Add the cropped image to the PDF
-          doc.addImage(cropCanvas.toDataURL('image/png'), 'PNG', 0, 0, croppedWidth, croppedHeight);
-  
-          // Save the PDF
-          doc.save("exported-image.pdf");
-        }
-      }
+  // Helper function to calculate content bounds
+  const calculateContentBounds = (objects: fabric.Object[]) => {
+    const boundingRect = {
+      left: Infinity,
+      top: Infinity,
+      right: -Infinity,
+      bottom: -Infinity
     };
-  };  
+  
+    objects.forEach(obj => {
+      const objBounds = obj.getBoundingRect();
+      boundingRect.left = Math.min(boundingRect.left, objBounds.left);
+      boundingRect.top = Math.min(boundingRect.top, objBounds.top);
+      boundingRect.right = Math.max(boundingRect.right, objBounds.left + objBounds.width);
+      boundingRect.bottom = Math.max(boundingRect.bottom, objBounds.top + objBounds.height);
+    });
+  
+    return {
+      left: boundingRect.left,
+      top: boundingRect.top,
+      width: boundingRect.right - boundingRect.left,
+      height: boundingRect.bottom - boundingRect.top
+    };
+  };
 
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -208,6 +216,10 @@ const Editor: React.FC = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
+  };
+
+  const handleNumbersDetected = (numbers: NumberPosition[]) => {
+    setNumberPositions(numbers);
   };
 
   return (
@@ -256,6 +268,7 @@ const Editor: React.FC = () => {
               showGrid={false}
               gridSpacing={50}
               toggleFrameEditability={toggleFrameEditability}
+              numberPositions={numberPositions}
             />
           ) : (
             <div className="plus-sign">
@@ -264,7 +277,10 @@ const Editor: React.FC = () => {
               </p>
             </div>
           )}
-          <ColorsList uploadedImage={uploadedImage} />
+          <ColorsList 
+                uploadedImage={uploadedImage}
+                onNumbersDetected={handleNumbersDetected}
+              />
         </div>
       </div>
       <Toolbar onUndo={handleUndo} onRedo={handleRedo}/>
