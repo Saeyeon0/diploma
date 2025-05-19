@@ -32,8 +32,8 @@
 
 .segment-button {
   margin-top: 10px;
-  margin-left: 150px;
-  padding: 5px 100px;
+  /* margin-left: 80px; */
+  padding: 5px 129px;
   font-size: 15px;
   background-color: #ebcdf6;
   color: black;
@@ -54,7 +54,7 @@
   transition: transform 0.2s ease-in-out;
 }
 
-.toggle-grid-button {
+.toggle-grid-button, .toggle-frame-button {
   margin-top: 10px;
   margin-left: 30px;
   padding: 5px 10px;
@@ -70,7 +70,30 @@
   font-family: 'Silkscreen', sans-serif;
 }
 
-.toggle-grid-button:hover {
+.toggle-grid-button:hover, .toggle-frame-button:hover {
+  background-color: #d1acdf;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s ease-in-out;
+}
+
+.generate-numbers-button {
+  margin-top: 10px;
+  margin-left: 30px;
+  padding: 5px 10px;
+  font-size: 15px;
+  background-color: #ebcdf6;
+  color: black;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.948);
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  font-family: 'Silkscreen', sans-serif;
+}
+
+.generate-numbers-button:hover {
   background-color: #d1acdf;
   color: white;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
@@ -105,7 +128,12 @@
       padding: 8px 16px;
     }
 
-    .toggle-grid-button {
+    .toggle-grid-button, .toggle-frame-button {
+      font-size: 12px;
+      padding: 8px 16px;
+    }
+
+    .generate-numbers-butto {
       font-size: 12px;
       padding: 8px 16px;
     }
