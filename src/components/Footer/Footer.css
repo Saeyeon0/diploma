@@ -4,7 +4,7 @@
     padding: 2rem;
     text-align: center;
     margin-top: 2rem;
-    font-family: 'Silkscreen', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
   
   .footer-links {
@@ -19,7 +19,7 @@
   .footer-item a {
     text-decoration: none;
     color: white;
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
   
   .footer-item a:hover {
@@ -27,10 +27,10 @@
   }
   
   .footer-credits {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: #bbb;
     margin-top: 1rem;
-    font-family: "Gruppo", serif;
+    font-family: 'Montserrat', sans-serif;
   }
   
   /* Responsive Design */

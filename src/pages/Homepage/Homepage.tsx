@@ -2,29 +2,26 @@ import React from "react";
 import "./Homepage.css";
 import homepageImage from "../../assets/homepage.webp";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const Homepage: React.FC = () => {
   const navigate = useNavigate();
   const handleStartProject = () => {
     navigate("/editor"); // Navigate to the editor page
   };
+  const { t } = useTranslation();
 
   return (
     <div className="homepage-container">
       <div className="homepage-text">
         <h1 className="homepage-title">ASG Therapy:</h1>
-        <h2 className="homepage-subtitle">Color / Art / Heal</h2>
+        <h2 className="homepage-subtitle">{t("home.sub")}</h2>
         <p className="homepage-description">
-          Our web app enables users to visualize and generate detailed vector
-          segments for various paintings, transforming images into structured,
-          paint-by-numbers compositions. Designed for precision and creativity,
-          it streamlines the process of segmenting, numbering, and organizing
-          colors, making it an ideal tool for art therapy, custom artwork, and
-          paint kit production.
+          {t("home.text")}
         </p>
         <div className="homepage-button">
           <button className="button-start" onClick={handleStartProject}>
-            Start Project
+            {t("home.button")}
           </button>
         </div>
       </div>

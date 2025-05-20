@@ -1,0 +1,40 @@
+{
+    "en": "En",
+    "navbar": {
+        "home": "HOME",
+        "gen": "GENERATE IMAGE",
+        "tut": "TUTORIAL",
+        "contact": "CONTACTS"
+    },
+    "home": {
+        "sub": "Color / Art / Heal",
+        "text": "Our web app enables users to visualize and generate detailed vector segments for various paintings, transforming images into structured, paint-by-numbers compositions. Designed for precision and creativity, it streamlines the process of segmenting, numbering, and organizing colors, making it an ideal tool for art therapy, custom artwork, and paint kit production.",
+        "button": "Start Project"
+    },
+    "footer": {
+        "home": "Home",
+        "gen": "Generate Image",
+        "tut": "Tutorial",
+        "contact": "Contacts"
+    },
+    "contacts": {
+        "text": "Get in Touch!",
+        "sub": "We'd love to connect with you!",
+        "sub2": "Follow our art therapy journey on social media or drop us an email:"
+    },
+    "tutorial": {
+        "title": "Step-by-Step Guide",
+        "1": "Step 1: Upload or Create Your Image",
+        "sub1": "Start by uploading your painting or photo — or generate a brand new image using our tools. Let your creativity begin!",
+        "2": "Step 2: Auto Segment & Number",
+        "sub2": "Our tool will automatically segment your image into numbered sections based on color palettes.",
+        "3": "Step 3: View Extracted Colors",
+        "sub3": "The extracted colors from your image will be listed. They’re automatically chosen to match the segments",
+        "4": "Step 4: Edit Your Image",
+        "sub4": "You can adjust the traced image if needed — move things around, tweak lines, or make it just right before numbering begins!",
+        "5": "Step 5: Export & Print",
+        "sub5": "Export your numbered canvas design as a PDF, ready for printing on a real canvas.",
+        "6": "Step 6: Start Painting!",
+        "sub6": "Use the printed canvas and paint kit to start your relaxing paint-by-numbers art therapy."
+    }
+}
