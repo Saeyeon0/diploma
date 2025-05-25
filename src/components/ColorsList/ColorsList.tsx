@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import ColorThief from "colorthief";
 import "./ColorsList.css";
+import { useTranslation } from "react-i18next";
 
 interface Color {
   _id: string;
@@ -23,6 +24,7 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage, onNumbersDetecte
   const [sortedExtractedColors, setSortedExtractedColors] = useState<Color[]>([]);
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetch("http://localhost:5001/colors")
@@ -244,7 +246,7 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage, onNumbersDetecte
 
   return (
     <div className="colors-panel">
-      <h3>Colors</h3>
+      <h3>{t("colors.colors")}</h3>
       <button className="close-button" onClick={toggleVisibility}>
         {isVisible ? "✕" : "↓"}
       </button>
@@ -258,7 +260,7 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage, onNumbersDetecte
       {isVisible && (
         <>
           <div className="colors-list">
-            <h4 className="colorslist-text">Extracted Colors</h4>
+            <h4 className="colorslist-text">{t("colors.extracted")}</h4>
             {sortedExtractedColors.length > 0 ? (
               sortedExtractedColors.map((color, index) => (
                 <div
@@ -271,12 +273,12 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage, onNumbersDetecte
                 </div>
               ))
             ) : (
-              <p className="placeholder">No extracted colors yet.</p>
+              <p className="placeholder">{t("colors.ph1")}</p>
             )}
           </div>
 
           <div className="colors-list">
-            <h4 className="colorslist-text">Current Image Colors</h4>
+            <h4 className="colorslist-text">{t("colors.current")}</h4>
             {highlightedColors.length > 0 ? (
               highlightedColors.map((color, index) => (
                 <div
@@ -289,7 +291,7 @@ const ColorsList: React.FC<ColorsListProps> = ({ uploadedImage, onNumbersDetecte
                 </div>
               ))
             ) : (
-              <p className="placeholder">No colors extracted.</p>
+              <p className="placeholder">{t("colors.ph2")}</p>
             )}
           </div>
         </>

@@ -36,5 +36,19 @@
         "sub5": "Export your numbered canvas design as a PDF, ready for printing on a real canvas.",
         "6": "Step 6: Start Painting!",
         "sub6": "Use the printed canvas and paint kit to start your relaxing paint-by-numbers art therapy."
+    },
+    "editor": "Drag an image here or click to upload",
+    "sidebar": {
+        "import": "Import",
+        "export": "Export",
+        "add": "Add File",
+        "pdf": "Export PDF"
+    },
+    "colors": {
+        "colors": "COLORS",
+        "extracted": "Extracted Colors",
+        "ph1": "No extracted colors yet.",
+        "current": "Current Image Colors",
+        "ph2": "No colors extracted."
     }
 }

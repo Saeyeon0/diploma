@@ -110,7 +110,7 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       toggleFrameEditability();
     };
 
-    // Enhanced Canny edge detection
+    // Enhanced Canny edge detection with better thresholding
     const enhancedCannyEdgeDetection = (data: Uint8ClampedArray, width: number, height: number) => {
       const edgeData = new Uint8ClampedArray(data.length);
       const sobelX = [
@@ -124,6 +124,10 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         [-1, -2, -1],
       ];
     
+      // First pass: Calculate gradients
+      const gradients = new Array(width * height).fill(0);
+      let maxGradient = 0;
+      
       for (let y = 1; y < height - 1; y++) {
         for (let x = 1; x < width - 1; x++) {
           let gx = 0, gy = 0;
@@ -139,11 +143,41 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
           }
     
           const magnitude = Math.sqrt(gx * gx + gy * gy);
+          gradients[y * width + x] = magnitude;
+          if (magnitude > maxGradient) maxGradient = magnitude;
+        }
+      }
+      
+      // Adaptive thresholding
+      const highThreshold = maxGradient * 0.2;
+      const lowThreshold = highThreshold * 0.5;
+      
+      // Second pass: Apply hysteresis thresholding
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
           const i = (y * width + x) * 4;
-    
-          const edgeValue = magnitude > 150 ? 0 : 255;
-    
-          edgeData[i] = edgeData[i + 1] = edgeData[i + 2] = edgeValue;
+          const magnitude = gradients[y * width + x];
+          
+          if (magnitude >= highThreshold) {
+            // Strong edge
+            edgeData[i] = edgeData[i + 1] = edgeData[i + 2] = 0;
+          } else if (magnitude >= lowThreshold) {
+            // Check if connected to strong edge
+            let isConnected = false;
+            for (let ky = -1; ky <= 1 && !isConnected; ky++) {
+              for (let kx = -1; kx <= 1 && !isConnected; kx++) {
+                if (ky === 0 && kx === 0) continue;
+                const ni = ((y + ky) * width + (x + kx)) * 4;
+                if (gradients[(y + ky) * width + (x + kx)] >= highThreshold) {
+                  isConnected = true;
+                }
+              }
+            }
+            edgeData[i] = edgeData[i + 1] = edgeData[i + 2] = isConnected ? 0 : 255;
+          } else {
+            // Non-edge
+            edgeData[i] = edgeData[i + 1] = edgeData[i + 2] = 255;
+          }
           edgeData[i + 3] = 255;
         }
       }
@@ -151,35 +185,57 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       return edgeData;
     };
 
-    // Clean up edges function
+    // Clean up edges function with morphological operations
     const cleanUpEdges = (data: Uint8ClampedArray, width: number, height: number) => {
       const cleanedData = new Uint8ClampedArray(data);
-    
+      
+      // First pass: Remove isolated edge pixels
       for (let y = 1; y < height - 1; y++) {
         for (let x = 1; x < width - 1; x++) {
           const i = (y * width + x) * 4;
-          const neighborValues = [
-            data[i - 4], data[i + 4],
-            data[i - width * 4], data[i + width * 4],
-          ];
-    
-          if (data[i] === 0) {
-            const hasNeighborEdge = neighborValues.some(value => value === 0);
-            if (!hasNeighborEdge) {
+          if (data[i] === 0) { // Edge pixel
+            let edgeNeighbors = 0;
+            for (let ky = -1; ky <= 1; ky++) {
+              for (let kx = -1; kx <= 1; kx++) {
+                if (ky === 0 && kx === 0) continue;
+                const ni = ((y + ky) * width + (x + kx)) * 4;
+                if (data[ni] === 0) edgeNeighbors++;
+              }
+            }
+            if (edgeNeighbors < 2) { // Isolated edge
               cleanedData[i] = cleanedData[i + 1] = cleanedData[i + 2] = 255;
             }
           }
         }
       }
-    
+      
+      // Second pass: Close small gaps
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const i = (y * width + x) * 4;
+          if (cleanedData[i] === 255) { // Non-edge pixel
+            let edgeNeighbors = 0;
+            for (let ky = -1; ky <= 1; ky++) {
+              for (let kx = -1; kx <= 1; kx++) {
+                if (ky === 0 && kx === 0) continue;
+                const ni = ((y + ky) * width + (x + kx)) * 4;
+                if (cleanedData[ni] === 0) edgeNeighbors++;
+              }
+            }
+            if (edgeNeighbors >= 5) { // Probably a gap
+              cleanedData[i] = cleanedData[i + 1] = cleanedData[i + 2] = 0;
+            }
+          }
+        }
+      }
+      
       return cleanedData;
     };
 
-    // Outline image function
+    // Outline image function with improved edge processing
     const outlineImage = () => {
       if (!fabricCanvas.current || !mainImageRef.current) return;
     
-      // Store current canvas state
       const originalImage = mainImageRef.current;
       const numbers = fabricCanvas.current.getObjects().filter(obj => obj.type === 'text');
       const backgrounds = fabricCanvas.current.getObjects().filter(obj => obj.type === 'rect');
@@ -196,21 +252,23 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       tempCanvas.width = originalWidth;
       tempCanvas.height = originalHeight;
       
-      // Draw the original image to temp canvas
+      // Draw the original image to temp canvas with slight blur for noise reduction
+      tempCtx.filter = 'blur(1px)';
       const imgElement = originalImage.getElement();
       tempCtx.drawImage(imgElement, 0, 0, originalWidth, originalHeight);
+      tempCtx.filter = 'none';
     
       // Process image data for edge detection
       const imageData = tempCtx.getImageData(0, 0, originalWidth, originalHeight);
       const data = imageData.data;
     
-      // Convert to grayscale
+      // Convert to grayscale with better luminance calculation
       for (let i = 0; i < data.length; i += 4) {
-        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        data[i] = data[i + 1] = data[i + 2] = avg;
+        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        data[i] = data[i + 1] = data[i + 2] = gray;
       }
     
-      // Apply edge detection
+      // Apply edge detection with better thresholding
       const edgeData = enhancedCannyEdgeDetection(data, originalWidth, originalHeight);
       const processedEdgeData = cleanUpEdges(edgeData, originalWidth, originalHeight);
     
@@ -227,6 +285,7 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         selectable: false,
         hasControls: false,
         hasBorders: false,
+        opacity: 0.9,
       });
     
       // Clear and rebuild the canvas
@@ -264,6 +323,9 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
           onSegmentsUpdated(exportCanvas.toDataURL("image/png"));
         }
       }
+      
+      // Re-analyze color regions after outlining
+      analyzeColorRegions(originalImage);
     };
 
     // Helper to get outlined image data
@@ -276,9 +338,11 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       tempCanvas.width = originalSize.width;
       tempCanvas.height = originalSize.height;
       
-      // Draw original image
+      // Draw original image with slight blur for noise reduction
+      tempCtx.filter = 'blur(1px)';
       const imgElement = img.getElement();
       tempCtx.drawImage(imgElement, 0, 0, originalSize.width, originalSize.height);
+      tempCtx.filter = 'none';
       
       // Get image data and apply edge detection
       const imageData = tempCtx.getImageData(0, 0, originalSize.width, originalSize.height);
@@ -287,7 +351,7 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       return new ImageData(edgeData, originalSize.width, originalSize.height);
     };
 
-    // Find enclosed regions in the outline
+    // Improved region finding with flood fill
     const findEnclosedRegions = (data: Uint8ClampedArray, width: number, height: number) => {
       const visited = new Array(width * height).fill(false);
       const regions: Array<{color: string, points: Array<{x: number, y: number}>}> = [];
@@ -304,9 +368,9 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         }
       }
       
-      // Second pass to find enclosed regions
-      for (let y = 1; y < height - 1; y += 3) { // Sample every 3px for performance
-        for (let x = 1; x < width - 1; x += 3) {
+      // Second pass to find enclosed regions with flood fill
+      for (let y = 1; y < height - 1; y += 2) { // Sample every 2px for performance
+        for (let x = 1; x < width - 1; x += 2) {
           const index = y * width + x;
           if (!visited[index] && !edgePixels.has(index)) {
             // Get the color at this position (from original image)
@@ -324,29 +388,33 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
             // Flood fill to find enclosed region
             const regionPoints: Array<{x: number, y: number}> = [];
             const queue = [{x, y}];
+            visited[index] = true;
             
             while (queue.length > 0) {
-              const point = queue.pop()!;
+              const point = queue.shift()!;
               const px = point.x;
               const py = point.y;
               
+              // Check bounds
               if (px <= 0 || px >= width - 1 || py <= 0 || py >= height - 1) continue;
               
               const pIndex = py * width + px;
-              if (visited[pIndex] || edgePixels.has(pIndex)) continue;
               
-              visited[pIndex] = true;
-              regionPoints.push({x: px, y: py});
-              
-              // Add neighbors (4-directional for better region detection)
-              queue.push({x: px + 1, y: py});
-              queue.push({x: px - 1, y: py});
-              queue.push({x: px, y: py + 1});
-              queue.push({x: px, y: py - 1});
+              // Add to region if not edge and not visited
+              if (!edgePixels.has(pIndex) && !visited[pIndex]) {
+                visited[pIndex] = true;
+                regionPoints.push({x: px, y: py});
+                
+                // Add neighbors (4-directional for better region detection)
+                queue.push({x: px + 1, y: py});
+                queue.push({x: px - 1, y: py});
+                queue.push({x: px, y: py + 1});
+                queue.push({x: px, y: py - 1});
+              }
             }
             
             // Only keep regions larger than a threshold
-            if (regionPoints.length > 30) {
+            if (regionPoints.length > 50) { // Increased minimum region size
               regions.push({
                 color,
                 points: regionPoints
@@ -359,7 +427,7 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       return regions;
     };
 
-    // Analyze the image to find distinct color regions
+    // Analyze the image to find distinct color regions with improved accuracy
     const analyzeColorRegions = (img: fabric.Image) => {
       const tempCanvas = document.createElement('canvas');
       const tempCtx = tempCanvas.getContext('2d');
@@ -369,22 +437,32 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       tempCanvas.width = originalSize.width;
       tempCanvas.height = originalSize.height;
       
-      // Draw the outlined version of the image
+      // Draw the original image to get color information
+      const imgElement = img.getElement();
+      tempCtx.drawImage(imgElement, 0, 0, originalSize.width, originalSize.height);
+      const originalImageData = tempCtx.getImageData(0, 0, originalSize.width, originalSize.height);
+      
+      // Get the outlined image data for edge detection
       const outlined = getOutlinedImageData(img);
       tempCtx.putImageData(outlined, 0, 0);
+      const edgeData = tempCtx.getImageData(0, 0, originalSize.width, originalSize.height).data;
       
-      // Get the outlined image data
-      const imageData = tempCtx.getImageData(0, 0, originalSize.width, originalSize.height);
-      const data = imageData.data;
+      // Combine original colors with edge data
+      const combinedData = new Uint8ClampedArray(originalImageData.data);
+      for (let i = 0; i < edgeData.length; i += 4) {
+        if (edgeData[i] === 0) { // Edge pixel
+          combinedData[i] = combinedData[i + 1] = combinedData[i + 2] = 0; // Black edges
+        }
+      }
       
       // Find enclosed regions in the outline
-      const regions = findEnclosedRegions(data, originalSize.width, originalSize.height);
+      const regions = findEnclosedRegions(combinedData, originalSize.width, originalSize.height);
       
       setColorRegions(regions);
       generateNumbersForRegions(regions);
     };
 
-    // Generate numbers for each color region
+    // Improved number generation for regions
     const generateNumbersForRegions = (regions: Array<{color: string, points: Array<{x: number, y: number}>}>) => {
       if (!mainImageRef.current || !fabricCanvas.current) return;
       
@@ -399,18 +477,37 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
         // Calculate centroid of the region
         let sumX = 0;
         let sumY = 0;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         
         region.points.forEach(point => {
           sumX += point.x;
           sumY += point.y;
+          minX = Math.min(minX, point.x);
+          minY = Math.min(minY, point.y);
+          maxX = Math.max(maxX, point.x);
+          maxY = Math.max(maxY, point.y);
         });
         
+        // Calculate center of mass
         const centerX = sumX / region.points.length;
         const centerY = sumY / region.points.length;
         
+        // Adjust position to be more centered in the region
+        // Find the point in the region closest to the center of mass
+        let bestPoint = region.points[0];
+        let minDist = Infinity;
+        
+        for (const point of region.points) {
+          const dist = Math.sqrt(Math.pow(point.x - centerX, 2) + Math.pow(point.y - centerY, 2));
+          if (dist < minDist) {
+            minDist = dist;
+            bestPoint = point;
+          }
+        }
+        
         positions.push({
-          x: centerX,
-          y: centerY,
+          x: bestPoint.x,
+          y: bestPoint.y,
           number: index + 1
         });
       });
@@ -423,7 +520,7 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       addNumbersToCanvas();
     };
 
-    // Add numbers to canvas with background for visibility
+    // Improved number placement with better visibility
     const addNumbersToCanvas = () => {
       if (!fabricCanvas.current || !mainImageRef.current) return;
     
@@ -438,17 +535,14 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
       const imgTop = img.top || 0;
       const imgWidth = (img.width || 0) * (img.scaleX || 1);
       const imgHeight = (img.height || 0) * (img.scaleY || 1);
+      const originalWidth = img.getOriginalSize().width;
+      const originalHeight = img.getOriginalSize().height;
     
       numberPositions.forEach((pos) => {
-        // Calculate position relative to the original image dimensions
-        const originalWidth = img.getOriginalSize().width;
-        const originalHeight = img.getOriginalSize().height;
-        
-        // Convert percentage positions to absolute coordinates
+        // Convert position from original image coordinates to canvas coordinates
         const xPercent = pos.x / originalWidth;
         const yPercent = pos.y / originalHeight;
         
-        // Map to displayed image coordinates
         const x = imgLeft + (xPercent * imgWidth);
         const y = imgTop + (yPercent * imgHeight);
     
@@ -459,19 +553,6 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
                              y <= imgTop + imgHeight;
     
         if (isInsideImage) {
-          // const bg = new fabric.Rect({
-          //   left: x,
-          //   top: y,
-          //   width: 20,
-          //   height: 20,
-          //   fill: 'white',
-          //   opacity: 0.7,
-          //   originX: 'center',
-          //   originY: 'center',
-          //   selectable: false,
-          //   evented: false,
-          //   name: 'number-bg'
-          // });
     
           const text = new fabric.Text(pos.number.toString(), {
             left: x,
@@ -479,14 +560,13 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
             fontSize: 12,
             fill: 'black',
             fontFamily: 'Arial',
-            // fontWeight: 'bold',
+            fontWeight: 'bold',
             originX: 'center',
             originY: 'center',
             selectable: false,
             evented: false,
           });
     
-          // fabricCanvas.current?.add(bg);
           fabricCanvas.current?.add(text);
           text.bringToFront();
         }
@@ -563,9 +643,9 @@ const ImageCanvas = forwardRef<HTMLCanvasElement | null, ImageCanvasProps>(
           <button className="toggle-frame-button" onClick={handleFrameEditability}>
             {isFrameEditable ? "Lock Frame" : "Edit Frame"}
           </button>
-          <button className="generate-numbers-button" onClick={() => mainImageRef.current && analyzeColorRegions(mainImageRef.current)}>
+          {/* <button className="generate-numbers-button" onClick={() => mainImageRef.current && analyzeColorRegions(mainImageRef.current)}>
             Generate Numbers
-          </button>
+          </button> */}
         </div>
       </div>
     );

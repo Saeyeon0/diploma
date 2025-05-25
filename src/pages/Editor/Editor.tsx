@@ -8,6 +8,7 @@ import ColorsList from "../../components/ColorsList/ColorsList";
 import ImageCanvas from "../../components/ImageCanvas/ImageCanvas";
 import TextBox from "../../components/TextBox/TextBox";
 import { fabric } from 'fabric';
+import { useTranslation } from "react-i18next";
 
 interface NumberPosition {
   x: number;
@@ -28,6 +29,7 @@ const Editor: React.FC = () => {
   const dropAreaRef = useRef<HTMLDivElement | null>(null);
   const [isFrameEditable, setIsFrameEditable] = useState(false);
   const [numberPositions, setNumberPositions] = useState<NumberPosition[]>([]);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchColors = async () => {
@@ -229,13 +231,13 @@ const Editor: React.FC = () => {
       </div>
       <div className={`editor-sidebar ${isSidebarOpen ? "show" : ""}`}>
         <div className="import-text">
-          <p>Import</p>
+          <p>{t("sidebar.import")}</p>
         </div>
         <button
           className="add-file-button"
           onClick={() => fileInputRef.current?.click()}
         >
-          Add File
+          {t("sidebar.add")}
         </button>
         <input
           type="file"
@@ -247,9 +249,9 @@ const Editor: React.FC = () => {
         />
 
         <div className="import-text">
-          <p>Export</p>
+          <p>{t("sidebar.export")}</p>
           <button className="export-button" onClick={handleExportPDF}>
-            Export PDF
+            {t("sidebar.pdf")}
           </button>
         </div>
       </div>
@@ -273,7 +275,7 @@ const Editor: React.FC = () => {
           ) : (
             <div className="plus-sign">
               <p onClick={handlePlusClick} style={{ cursor: "pointer" }}>
-              ☆ Drag an image here or click to upload ☆
+              ☆ {t("editor")} ☆
               </p>
             </div>
           )}

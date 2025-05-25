@@ -68,8 +68,8 @@
 
 .error-message {
   color: red;
-  font-weight: bold;
-  font-family: 'Silkscreen', sans-serif;
+  font-family: 'Montserrat', sans-serif;  
+  font-weight: 500;
 }
 
 .colors-panel {
@@ -90,7 +90,8 @@
   color: #282727;
   font-size: 1.2rem;
   margin: 0.2rem;
-  font-family: 'Silkscreen', sans-serif;
+  font-family: 'Montserrat', sans-serif;  
+  font-weight: 600;
 }
 
 select {
@@ -147,11 +148,13 @@ select {
 
 .colorslist-text {
   color: #000;
-  font-family: 'Silkscreen', sans-serif;
+  font-family: 'Montserrat', sans-serif;  
+  font-weight: 500;
 }
 
 .placeholder {
-  font-family: "Gruppo", serif;
+  font-family: 'Montserrat', sans-serif; 
+  font-weight: 400; 
 }
 
 @media (max-width: 768px) {
