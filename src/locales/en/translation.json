@@ -50,5 +50,12 @@
         "ph1": "No extracted colors yet.",
         "current": "Current Image Colors",
         "ph2": "No colors extracted."
+    },
+    "canvas": {
+        "outline": "Outline Image",
+        "hide": "Hide Grid",
+        "show": "Show Grid",
+        "lock": "Lock Frame",
+        "edit": "Edit Frame"
     }
 }
